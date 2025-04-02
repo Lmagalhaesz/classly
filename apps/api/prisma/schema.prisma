@@ -7,18 +7,115 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum Role {
   STUDENT
   TEACHER
   ADMIN
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Group {
+  id    String   @id @default(uuid())
+  name  String
+  users User[]
+}
+
+model User {
+  id                      String                     @id @default(uuid())
+  name                    String
+  email                   String                     @unique
+  password                String
+  role                    Role                       @default(STUDENT)
+  level                   Level
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  // Relação com o grupo/turma (opcional)
+  groupId                 String?
+  group                   Group?                     @relation(fields: [groupId], references: [id])
+
+  // Relações
+  chatMessages            ChatMessage[]
+  tasks                   Task[]
+  personalizedMessages    PersonalizedMessage[]
+  videos                  Video[]
+  scheduledClasses        ScheduledClass[]
+  taskAttempts            TaskAttempt[]
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  content    String
+  createdAt  DateTime @default(now())
+  
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  description String
+  createdAt   DateTime @default(now())
+  level       Level    // Nível da tarefa; alunos com mesmo nível terão acesso a essas tasks
+  
+  // Usuário (aluno) que recebeu a tarefa
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  
+  // Tentativas da tarefa
+  attempts    TaskAttempt[]
+}
+
+model TaskAttempt {
+  id               String   @id @default(uuid())
+  
+  // Relação com a tarefa
+  task             Task     @relation(fields: [taskId], references: [id])
+  taskId           String
+  
+  // Aluno que realizou a tentativa
+  student          User     @relation(fields: [studentId], references: [id])
+  studentId        String
+  
+  correctAnswers   Int
+  incorrectAnswers Int
+  score            Float?   // Pode ser utilizado para armazenar uma pontuação, se necessário
+  startedAt        DateTime @default(now())
+  finishedAt       DateTime
+}
+
+model PersonalizedMessage {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  
+  // Professor que criou a mensagem personalizada
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+}
+
+model Video {
+  id         String   @id @default(uuid())
+  title      String
+  url        String
+  uploadedAt DateTime @default(now())
+  
+  // Professor que fez o upload
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+}
+
+model ScheduledClass {
+  id          String   @id @default(uuid())
+  title       String
+  scheduledAt DateTime
+  
+  // Professor responsável pela aula
+  teacher     User     @relation(fields: [teacherId], references: [id])
+  teacherId   String
 }
