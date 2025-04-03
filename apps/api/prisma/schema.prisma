@@ -7,6 +7,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Enums
 enum Role {
   STUDENT
   TEACHER
@@ -14,108 +15,143 @@ enum Role {
 }
 
 enum Level {
-  BEGINNER
+  BASIC
+  LOWER_INTERMEDIATE
   INTERMEDIATE
+  UPPER_INTERMEDIATE
   ADVANCED
 }
 
-model Group {
-  id    String   @id @default(uuid())
-  name  String
-  users User[]
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
 }
 
+enum MessageType {
+  CLASS_LINK
+  PAYMENT_REMINDER
+  BIRTHDAY_GREETING
+  ACTIVITY_FOLLOW_UP
+}
+
+// Modelos
+
 model User {
-  id                      String                     @id @default(uuid())
-  name                    String
-  email                   String                     @unique
-  password                String
-  role                    Role                       @default(STUDENT)
-  level                   Level
-  createdAt               DateTime                   @default(now())
-  updatedAt               DateTime                   @updatedAt
+  id              String       @id @default(uuid())
+  name            String
+  email           String       @unique
+  password        String
+  role            Role
+  level           Level?
+  groupId         String?
+  group           Group?       @relation(fields: [groupId], references: [id])
+  
+  groups          Group[]      @relation("TeacherGroups")
+  chatMessages    ChatMessage[]
+  payments        Payment[]
+  taskAttempts    TaskAttempt[]
+  chatInsights    ChatInsight[]
+  activities      Activity[]
+  videos          Video[]
+  messageConfigs  AutomatedMessageConfig[]
+  playlists       Playlist[]   // Adicionado para playlists dos professores
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
 
-  // Relação com o grupo/turma (opcional)
-  groupId                 String?
-  group                   Group?                     @relation(fields: [groupId], references: [id])
+model Group {
+  id          String     @id @default(uuid())
+  name        String
+  teacherId   String
+  teacher     User       @relation("TeacherGroups", fields: [teacherId], references: [id])
+  students    User[]
+  activities  Activity[] // Adicionado para relação inversa com Activity
+}
 
-  // Relações
-  chatMessages            ChatMessage[]
-  tasks                   Task[]
-  personalizedMessages    PersonalizedMessage[]
-  videos                  Video[]
-  scheduledClasses        ScheduledClass[]
-  taskAttempts            TaskAttempt[]
+model Payment {
+  id          String         @id @default(uuid())
+  studentId   String
+  student     User           @relation(fields: [studentId], references: [id])
+  dueDate     DateTime
+  amount      Float
+  status      PaymentStatus  @default(PENDING)
+  paymentDate DateTime?
+  plan        String?
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime     @default(now())
+  teacherId   String
+  teacher     User         @relation(fields: [teacherId], references: [id])
+  level       Level
+  groupId     String?
+  group       Group?       @relation(fields: [groupId], references: [id])
+  
+  taskAttempts TaskAttempt[]
+}
+
+model TaskAttempt {
+  id               String    @id @default(uuid())
+  activityId       String
+  activity         Activity  @relation(fields: [activityId], references: [id])
+  studentId        String
+  student          User      @relation(fields: [studentId], references: [id])
+  correctAnswers   Int
+  incorrectAnswers Int
+  score            Float?
+  startedAt        DateTime  @default(now())
+  finishedAt       DateTime
+}
+
+model Video {
+  id          String     @id @default(uuid())
+  title       String
+  url         String
+  description String?
+  playlistId  String?
+  playlist    Playlist?  @relation(fields: [playlistId], references: [id])
+  uploadedAt  DateTime   @default(now())
+  teacherId   String
+  teacher     User       @relation(fields: [teacherId], references: [id])
+}
+
+model Playlist {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  teacherId   String
+  teacher     User       @relation(fields: [teacherId], references: [id])
+  videos      Video[]
+  createdAt   DateTime   @default(now())
 }
 
 model ChatMessage {
   id         String   @id @default(uuid())
   content    String
   createdAt  DateTime @default(now())
-  
-  user       User     @relation(fields: [userId], references: [id])
   userId     String
+  user       User     @relation(fields: [userId], references: [id])
 }
 
-model Task {
-  id          String   @id @default(uuid())
-  description String
-  createdAt   DateTime @default(now())
-  level       Level    // Nível da tarefa; alunos com mesmo nível terão acesso a essas tasks
-  
-  // Usuário (aluno) que recebeu a tarefa
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  
-  // Tentativas da tarefa
-  attempts    TaskAttempt[]
-}
-
-model TaskAttempt {
-  id               String   @id @default(uuid())
-  
-  // Relação com a tarefa
-  task             Task     @relation(fields: [taskId], references: [id])
-  taskId           String
-  
-  // Aluno que realizou a tentativa
-  student          User     @relation(fields: [studentId], references: [id])
-  studentId        String
-  
-  correctAnswers   Int
-  incorrectAnswers Int
-  score            Float?   // Pode ser utilizado para armazenar uma pontuação, se necessário
-  startedAt        DateTime @default(now())
-  finishedAt       DateTime
-}
-
-model PersonalizedMessage {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-  
-  // Professor que criou a mensagem personalizada
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-}
-
-model Video {
+model ChatInsight {
   id         String   @id @default(uuid())
-  title      String
-  url        String
-  uploadedAt DateTime @default(now())
-  
-  // Professor que fez o upload
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String
+  studentId  String
+  student    User     @relation(fields: [studentId], references: [id])
+  insight    String
+  createdAt  DateTime @default(now())
 }
 
-model ScheduledClass {
-  id          String   @id @default(uuid())
-  title       String
-  scheduledAt DateTime
-  
-  // Professor responsável pela aula
-  teacher     User     @relation(fields: [teacherId], references: [id])
+model AutomatedMessageConfig {
+  id          String      @id @default(uuid())
   teacherId   String
+  teacher     User        @relation(fields: [teacherId], references: [id])
+  messageType MessageType
+  template    String
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
 }
