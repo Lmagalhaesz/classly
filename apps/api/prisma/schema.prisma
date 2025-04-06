@@ -118,6 +118,7 @@ model Video {
   uploadedAt  DateTime   @default(now())
   teacherId   String
   teacher     User       @relation(fields: [teacherId], references: [id])
+  level       Level
 }
 
 model Playlist {
@@ -127,6 +128,7 @@ model Playlist {
   teacherId   String
   teacher     User       @relation(fields: [teacherId], references: [id])
   videos      Video[]
+  level       Level
   createdAt   DateTime   @default(now())
 }
 
