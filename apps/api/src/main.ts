@@ -13,8 +13,8 @@ async function bootstrap() {
   });
 
   const config = new DocumentBuilder()
-    .setTitle('Supply Sync Swagger')
-    .setDescription('The logistic future')
+    .setTitle('Linfox Swagger')
+    .setDescription('The future of education systems.')
     .setVersion('1.0')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);

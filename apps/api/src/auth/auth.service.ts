@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { Level, Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -20,40 +19,4 @@ export class AuthService {
 
     return user;
   }
-
-  async login(user: any) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      level: user.level, // opcional, caso queira incluir o nível do usuário no token
-    };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
-
-  }
-  async registerUser(
-    name: string,
-    email: string,
-    password: string,
-    role: Role,
-    level: Level,
-    groupId?: string,
-  ) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    return this.prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        level,
-        groupId, // Se não for fornecido, ficará como null.
-      },
-    });
-  }
-  
-
-
 }
