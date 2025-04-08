@@ -4,12 +4,19 @@ import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { WinstonModule } from 'nest-winston';
 import { loggerOptions } from './logging/logging.config';
+import { ConfigService } from '@nestjs/config';
 
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(loggerOptions),
+  });
+  const configService = app.get(ConfigService);
+
+  //Configuração CORS
+  app.enableCors({
+    origin: configService.get('security.corsOrigin'),
   });
 
   const config = new DocumentBuilder()
@@ -20,6 +27,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = configService.get<number>('port') || 3000;
+  await app.listen(port);
 }
 bootstrap();

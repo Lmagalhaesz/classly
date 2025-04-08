@@ -7,5 +7,10 @@ export default () => ({
       secret: process.env.JWT_SECRET,
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
     },
+    security: {
+        corsOrigin: process.env.CORS_ORIGIN || '*',
+        rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),
+        rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX ?? '100', 10),
+      },      
   });
   
