@@ -13,10 +13,29 @@ import { AutomatedMessagesModule } from './automated-messages/automated-messages
 import { ChatService } from './chat/chat.service';
 import { ChatController } from './chat/chat.controller';
 import { ChatModule } from './chat/chat.module';
+import { TeacherModule } from './teacher/teacher.module';
+import { StudentService } from './student/student.service';
+import { StudentController } from './student/student.controller';
+import { StudentModule } from './student/student.module';
 
 @Module({
-  imports: [PrismaModule, UserModule, AuthModule, LoggingModule, GroupsModule, PaymentsModule, ActivitiesModule, VideosModule, PlaylistsModule, ChatInsightsModule, AutomatedMessagesModule, ChatModule],
-  controllers: [ChatController],
-  providers: [ChatService],
+  imports: [
+    PrismaModule,
+    UserModule,
+    AuthModule,
+    LoggingModule,
+    GroupsModule,
+    PaymentsModule,
+    ActivitiesModule,
+    VideosModule,
+    PlaylistsModule,
+    ChatInsightsModule,
+    AutomatedMessagesModule,
+    ChatModule,
+    TeacherModule,
+    StudentModule,
+  ],
+  controllers: [ChatController, StudentController],
+  providers: [ChatService, StudentService],
 })
 export class AppModule {}
