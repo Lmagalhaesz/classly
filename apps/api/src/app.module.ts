@@ -17,9 +17,15 @@ import { TeacherModule } from './teacher/teacher.module';
 import { StudentService } from './student/student.service';
 import { StudentController } from './student/student.controller';
 import { StudentModule } from './student/student.module';
+import { ConfigModule } from '@nestjs/config';
+import configuration from './config/configuration';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,  // Faz as configurações estarem disponíveis globalmente
+      load: [configuration], // Carrega o arquivo de configuração
+    }),
     PrismaModule,
     UserModule,
     AuthModule,
