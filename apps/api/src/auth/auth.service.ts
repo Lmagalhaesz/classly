@@ -67,13 +67,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expirado.');
     }
 
-    // Opcional: Revogar o refresh token antigo
     await this.prisma.refreshToken.update({
       where: { id: storedToken.id },
       data: { revoked: true },
     });
 
-    // Gerar novo access token
     const user = await this.userService.getUserById(storedToken.userId);
     if (!user) {
       throw new UnauthorizedException('Usuário não encontrado.');
@@ -84,20 +82,18 @@ export class AuthService {
       secret: this.configService.get('JWT_SECRET'),
     });
 
-    // Gerar novo refresh token
     const newRefreshToken = await this.createRefreshToken(user.id);
 
     return { access_token: accessToken, refresh_token: newRefreshToken.token };
   }
 
-  // Método auxiliar para criar refresh token (exemplo)
   async createRefreshToken(userId: string): Promise<{ token: string }> {
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!refreshSecret) {
       throw new Error('JWT_REFRESH_SECRET não configurado.');
     }
     const token = this.jwtService.sign({ sub: userId }, { expiresIn: '7d', secret: refreshSecret });
-    const expiresInMs = 7 * 24 * 60 * 60 * 1000; // 7 dias em milissegundos
+    const expiresInMs = 7 * 24 * 60 * 60 * 1000;
     const expiresAt = new Date(Date.now() + expiresInMs);
     await this.prisma.refreshToken.create({
       data: {
@@ -107,5 +103,29 @@ export class AuthService {
       },
     });
     return { token };
+  }
+
+  async logout(refreshToken: string): Promise<{ message: string }> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token não fornecido.');
+    }
+    
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+    });
+    
+    if (!storedToken) {
+      throw new UnauthorizedException('Refresh token inválido ou não encontrado.');
+    }
+    if (storedToken.revoked) {
+      throw new UnauthorizedException('Refresh token já revogado.');
+    }
+    
+    await this.prisma.refreshToken.update({
+      where: { token: refreshToken },
+      data: { revoked: true },
+    });
+    
+    return { message: 'Logout realizado com sucesso.' };
   }
 }

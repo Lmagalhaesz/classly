@@ -38,4 +38,11 @@ export class AuthController {
   async getProfile(@Request() req) {
     return req.user;
   }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Revoga o refresh token e efetua o logout do usuário' })
+  @ApiResponse({ status: 200, description: 'Logout realizado com sucesso.' })
+  async logout(@Body('refresh_token') refreshToken: string) {
+    return this.authService.logout(refreshToken);
+  }
 }
