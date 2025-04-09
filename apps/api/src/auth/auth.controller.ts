@@ -1,10 +1,8 @@
-// src/auth/auth.controller.ts
-
-import { Controller, Post, Body, Get, Request, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterUserDto } from './dtos/register-user.dto';
 import { LoginDto } from './dtos/login.dto';
+import { RegisterUserDto } from './dtos/register-user.dto';
 import { JwtAuthGuard } from './guards/jwt_auth.guard';
 
 @ApiTags('auth')
@@ -13,22 +11,24 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Registrar um novo usuário' })
+  @ApiOperation({ summary: 'Registra um novo usuário' })
   @ApiResponse({ status: 201, description: 'Usuário registrado com sucesso.' })
-  @ApiResponse({ status: 409, description: 'O email já está em uso.' })
   async register(@Body() registerUserDto: RegisterUserDto) {
     return this.authService.registerUser(registerUserDto);
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Autenticar usuário e retornar um token JWT' })
-  @ApiResponse({
-    status: 200,
-    description: 'Usuário autenticado com sucesso e token JWT retornado.',
-  })
-  @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
+  @ApiOperation({ summary: 'Autentica usuário e retorna tokens JWT' })
+  @ApiResponse({ status: 200, description: 'Usuário autenticado com sucesso.' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Renova o access token usando o refresh token' })
+  @ApiResponse({ status: 200, description: 'Tokens renovados com sucesso.' })
+  async refresh(@Body('refresh_token') refreshToken: string) {
+    return this.authService.refreshToken(refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)

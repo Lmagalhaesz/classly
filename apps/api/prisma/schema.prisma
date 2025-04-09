@@ -38,114 +38,116 @@ enum MessageType {
 // Modelos
 
 model User {
-  id              String       @id @default(uuid())
-  name            String
-  email           String       @unique
-  password        String
-  role            Role
-  level           Level?
-  groupId         String?
-  group           Group?       @relation(fields: [groupId], references: [id])
-  
-  groups          Group[]      @relation("TeacherGroups")
-  chatMessages    ChatMessage[]
-  payments        Payment[]
-  taskAttempts    TaskAttempt[]
-  chatInsights    ChatInsight[]
-  activities      Activity[]
-  videos          Video[]
-  messageConfigs  AutomatedMessageConfig[]
-  playlists       Playlist[]   // Adicionado para playlists dos professores
-  
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  password String
+  role     Role
+  level    Level?
+  groupId  String?
+  group    Group?  @relation(fields: [groupId], references: [id])
+
+  groups         Group[]                  @relation("TeacherGroups")
+  chatMessages   ChatMessage[]
+  payments       Payment[]
+  taskAttempts   TaskAttempt[]
+  chatInsights   ChatInsight[]
+  activities     Activity[]
+  videos         Video[]
+  messageConfigs AutomatedMessageConfig[]
+  playlists      Playlist[] // Adicionado para playlists dos professores
+
+  refreshTokens RefreshToken[] @relation("UserRefreshTokens")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Group {
-  id          String     @id @default(uuid())
-  name        String
-  teacherId   String
-  teacher     User       @relation("TeacherGroups", fields: [teacherId], references: [id])
-  students    User[]
-  activities  Activity[] // Adicionado para relação inversa com Activity
+  id         String     @id @default(uuid())
+  name       String
+  teacherId  String
+  teacher    User       @relation("TeacherGroups", fields: [teacherId], references: [id])
+  students   User[]
+  activities Activity[] // Adicionado para relação inversa com Activity
 }
 
 model Payment {
-  id          String         @id @default(uuid())
+  id          String        @id @default(uuid())
   studentId   String
-  student     User           @relation(fields: [studentId], references: [id])
+  student     User          @relation(fields: [studentId], references: [id])
   dueDate     DateTime
   amount      Float
-  status      PaymentStatus  @default(PENDING)
+  status      PaymentStatus @default(PENDING)
   paymentDate DateTime?
   plan        String?
 }
 
 model Activity {
-  id          String       @id @default(uuid())
+  id          String   @id @default(uuid())
   title       String
   description String
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime @default(now())
   teacherId   String
-  teacher     User         @relation(fields: [teacherId], references: [id])
+  teacher     User     @relation(fields: [teacherId], references: [id])
   level       Level
   groupId     String?
-  group       Group?       @relation(fields: [groupId], references: [id])
-  
+  group       Group?   @relation(fields: [groupId], references: [id])
+
   taskAttempts TaskAttempt[]
 }
 
 model TaskAttempt {
-  id               String    @id @default(uuid())
+  id               String   @id @default(uuid())
   activityId       String
-  activity         Activity  @relation(fields: [activityId], references: [id])
+  activity         Activity @relation(fields: [activityId], references: [id])
   studentId        String
-  student          User      @relation(fields: [studentId], references: [id])
+  student          User     @relation(fields: [studentId], references: [id])
   correctAnswers   Int
   incorrectAnswers Int
   score            Float?
-  startedAt        DateTime  @default(now())
+  startedAt        DateTime @default(now())
   finishedAt       DateTime
 }
 
 model Video {
-  id          String     @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   url         String
   description String?
   playlistId  String?
-  playlist    Playlist?  @relation(fields: [playlistId], references: [id])
-  uploadedAt  DateTime   @default(now())
+  playlist    Playlist? @relation(fields: [playlistId], references: [id])
+  uploadedAt  DateTime  @default(now())
   teacherId   String
-  teacher     User       @relation(fields: [teacherId], references: [id])
+  teacher     User      @relation(fields: [teacherId], references: [id])
   level       Level
 }
 
 model Playlist {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
   teacherId   String
-  teacher     User       @relation(fields: [teacherId], references: [id])
+  teacher     User     @relation(fields: [teacherId], references: [id])
   videos      Video[]
   level       Level
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime @default(now())
 }
 
 model ChatMessage {
-  id         String   @id @default(uuid())
-  content    String
-  createdAt  DateTime @default(now())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model ChatInsight {
-  id         String   @id @default(uuid())
-  studentId  String
-  student    User     @relation(fields: [studentId], references: [id])
-  insight    String
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  insight   String
+  createdAt DateTime @default(now())
 }
 
 model AutomatedMessageConfig {
@@ -156,4 +158,14 @@ model AutomatedMessageConfig {
   template    String
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation("UserRefreshTokens", fields: [userId], references: [id])
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
