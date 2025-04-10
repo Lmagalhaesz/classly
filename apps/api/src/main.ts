@@ -14,7 +14,6 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
-  //Configuração CORS
   app.enableCors({
     origin: configService.get('security.corsOrigin'),
   });
@@ -28,6 +27,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, documentFactory);
 
   const port = configService.get<number>('port') || 3000;
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
   await app.listen(port);
 }
 bootstrap();

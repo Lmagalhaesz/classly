@@ -1,9 +1,19 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Req,
+  Res,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterUserDto } from './dtos/register-user.dto';
 import { JwtAuthGuard } from './guards/jwt_auth.guard';
+import { Request as ExpressRequest , Response } from 'express';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -18,10 +28,20 @@ export class AuthController {
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Autentica usuário e retorna tokens JWT' })
-  @ApiResponse({ status: 200, description: 'Usuário autenticado com sucesso.' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  @ApiOperation({ summary: 'Autentica o usuário e retorna tokens JWT' })
+  async login(@Body() loginDto: LoginDto, @Req() req: ExpressRequest, @Res() res: Response) {
+    const userAgent = req.headers['user-agent'] || 'Unknown Browser';
+    const ipAddress = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown IP';
+
+    const { access_token, refresh_token } = await this.authService.login({ ...loginDto, userAgent, ipAddress });
+    
+    res.cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+    });
+    return res.json({ access_token });
   }
 
   @Post('refresh')
@@ -40,7 +60,9 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiOperation({ summary: 'Revoga o refresh token e efetua o logout do usuário' })
+  @ApiOperation({
+    summary: 'Revoga o refresh token e efetua o logout do usuário',
+  })
   @ApiResponse({ status: 200, description: 'Logout realizado com sucesso.' })
   async logout(@Body('refresh_token') refreshToken: string) {
     return this.authService.logout(refreshToken);
