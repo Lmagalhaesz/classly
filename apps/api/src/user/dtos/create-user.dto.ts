@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { Role, Level } from '@prisma/client';
 
 export class CreateUserDto {
@@ -17,6 +17,7 @@ export class CreateUserDto {
   @IsEnum(Role, { message: `O role deve ser um dos: ${Object.values(Role).join(', ')}.` })
   role: Role;
 
+  @ValidateIf((o) => o.role === Role.STUDENT)
   @IsOptional()
   @IsEnum(Level, { message: `O nível deve ser um dos: ${Object.values(Level).join(', ')}.` })
   level?: Level;
