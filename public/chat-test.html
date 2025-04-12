@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Chat de Teste - Linfox</title>
-  <!-- Inclua o Socket.IO client; se já tiver hospedado localmente, ajuste o path -->
   <script src="/js/socket.io.min.js"></script>
   <style>
     body {
@@ -34,29 +33,22 @@
   <button id="send">Enviar</button>
 
   <script>
-    // Conecte-se ao servidor WebSocket. Ajuste a URL se necessário:
     const socket = io("http://localhost:3000", {
       reconnection: true,
-      // Configurações adicionais podem ser passadas aqui se necessário.
     });
 
-    // Para testes, usamos um ID de conversa fixo. Em produção, esse ID deve ser criado via um endpoint.
     let conversationId = "eb207520-dc7c-4ee3-8f98-583d7b827da0"; 
 
-    // Função para adicionar mensagem à área de mensagens
     function addMessage(sender, message) {
       const messagesDiv = document.getElementById("messages");
       const msgElem = document.createElement("div");
       msgElem.textContent = `${sender}: ${message}`;
       messagesDiv.appendChild(msgElem);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight; // rola para o fim
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    // Exibe mensagens de status da conexão
     socket.on("connect", () => {
       addMessage("Sistema", "Conectado ao Chat (ID do socket: " + socket.id + ").");
-      // Opcional: se você quer criar uma conversa automaticamente, pode fazer isso via API REST.
-      // Aqui, para testes, estamos usando um ID fixo.
     });
 
     socket.on("disconnect", () => {
@@ -67,19 +59,15 @@
       addMessage("Sistema", "Erro de conexão: " + err.message);
     });
 
-    // Quando uma resposta do chat (IA) for recebida
     socket.on("chatResponse", (data) => {
-      // data deve ter conversationId e message
       addMessage("IA", data.message);
     });
 
-    // Enviar mensagem ao clicar no botão ou ao pressionar Enter
     document.getElementById("send").addEventListener("click", () => {
       const messageInput = document.getElementById("input");
       const message = messageInput.value.trim();
       if (message !== "") {
         addMessage("Você", message);
-        // Envia a mensagem para o servidor via Socket.IO
         socket.emit("chatMessage", { conversationId, message });
         messageInput.value = "";
       }

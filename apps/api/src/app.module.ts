@@ -7,7 +7,7 @@ import { GroupsModule } from './groups/groups.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { VideosModule } from './videos/videos.module';
-import { PlaylistsModule } from './playlists/playlists.module';
+import { PlaylistModule } from './playlists/playlist.module';
 import { ChatInsightsModule } from './chat-insights/chat-insights.module';
 import { AutomatedMessagesModule } from './automated-messages/automated-messages.module';
 import { ChatService } from './chat/chat.service';
@@ -39,7 +39,7 @@ import { join } from 'path';
     PaymentsModule,
     ActivitiesModule,
     VideosModule,
-    PlaylistsModule,
+    PlaylistModule,
     ChatInsightsModule,
     AutomatedMessagesModule,
     ChatModule,

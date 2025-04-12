@@ -8,7 +8,6 @@ import { Sender } from '@prisma/client';
 export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Método para criar uma nova conversa para o usuário
   async createConversation(userId: string): Promise<{ id: string }> {
     const conversation = await this.prisma.conversation.create({
       data: {
@@ -43,27 +42,20 @@ export class ChatService {
       return 'OpenAI API key não configurada.';
     }
     
-    // Obtenha o histórico de mensagens para a conversa
     const history = await this.getConversationHistory(conversationId);
     
-    // Construa o array de mensagens para a API do OpenAI
-    // Assumindo que o histórico salvo tem "sender" e "content"
-    // Mapeie os remetentes para os papéis esperados pela API: "system", "user" e "assistant" (neste exemplo, usamos "user" para mensagens do aluno)
     const messagesForAPI = history.map(msg => {
       let role;
-      // Para o nosso caso, se a mensagem foi enviada pelo aluno, usamos "user"
-      // Se foi enviada pela IA, usamos "assistant"; se for de outro tipo, você pode adaptar
       if (msg.sender === Sender.STUDENT) {
         role = "user";
       } else if (msg.sender === Sender.AI) {
         role = "assistant";
       } else {
-        role = "system"; // ou definir conforme a lógica do seu projeto
+        role = "system";
       }
       return { role, content: msg.content };
     });
     
-    // Adicione a nova mensagem ao histórico (como se fosse enviada agora)
     messagesForAPI.push({ role: "user", content: message });
     
     try {
@@ -83,7 +75,6 @@ export class ChatService {
       
       const aiMessage = response.data.choices[0].message.content;
       
-      // Opcional: Salve a mensagem da IA na conversa
       await this.prisma.chatMessage.create({
         data: {
           content: aiMessage,

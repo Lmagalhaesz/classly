@@ -7,7 +7,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('chat')
 @Controller('chat')
-@UseGuards(JwtAuthGuard) // Apenas usuários autenticados podem criar conversas
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

@@ -130,7 +130,7 @@ model Video {
 
 model Playlist {
   id          String   @id @default(uuid())
-  name        String
+  title        String
   description String?
   teacherId   String
   teacher     User     @relation(fields: [teacherId], references: [id])
