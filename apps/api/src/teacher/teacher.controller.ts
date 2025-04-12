@@ -8,7 +8,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 @ApiTags('teacher')
 @Controller('teacher')
 @UseGuards(JwtAuthGuard, TeacherGuard) 
-export class teacherController {
+export class TeacherController {
   constructor(private readonly teacherService: TeacherService) {}
 
   @Get('dashboard')

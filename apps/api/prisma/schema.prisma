@@ -35,6 +35,11 @@ enum MessageType {
   ACTIVITY_FOLLOW_UP
 }
 
+enum Sender {
+  STUDENT
+  AI
+}
+
 // Modelos
 
 model User {
@@ -48,10 +53,10 @@ model User {
   group    Group?  @relation(fields: [groupId], references: [id])
 
   groups         Group[]                  @relation("TeacherGroups")
-  chatMessages   ChatMessage[]
   payments       Payment[]
   taskAttempts   TaskAttempt[]
   chatInsights   ChatInsight[]
+  conversations  Conversation[]
   activities     Activity[]
   videos         Video[]
   messageConfigs AutomatedMessageConfig[]
@@ -134,22 +139,6 @@ model Playlist {
   createdAt   DateTime @default(now())
 }
 
-model ChatMessage {
-  id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model ChatInsight {
-  id        String   @id @default(uuid())
-  studentId String
-  student   User     @relation(fields: [studentId], references: [id])
-  insight   String
-  createdAt DateTime @default(now())
-}
-
 model AutomatedMessageConfig {
   id          String      @id @default(uuid())
   teacherId   String
@@ -168,4 +157,35 @@ model RefreshToken {
   expiresAt DateTime
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id          String        @id @default(uuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  messages    ChatMessage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  ChatInsight ChatInsight[]
+}
+
+model ChatMessage {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  content        String
+  sender         Sender
+  createdAt      DateTime     @default(now())
+}
+
+model ChatInsight {
+  id             String   @id @default(uuid())
+  conversationId String
+  studentId      String
+  insight        String
+  createdAt      DateTime @default(now())
+
+  // Relações:
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  student      User         @relation(fields: [studentId], references: [id])
 }
