@@ -4,12 +4,12 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PlaylistService } from './playlist.service';
 import { CreatePlaylistDto } from './dtos/create-playlist.dto';
 import { UpdatePlaylistDto } from './dtos/update-playlist.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt_auth.guard';
 import { Request } from 'express';
+import { TeacherGuard } from 'src/teacher/guards/teacher.guard';
 
 @ApiTags('playlists')
 @Controller('playlists')
-@UseGuards(JwtAuthGuard)
+@UseGuards(TeacherGuard)
 export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) {}
 
@@ -17,7 +17,6 @@ export class PlaylistController {
   @ApiOperation({ summary: 'Cria uma nova playlist' })
   @ApiResponse({ status: 201, description: 'Playlist criada com sucesso.' })
   async create(@Body() createPlaylistDto: CreatePlaylistDto, @Req() req: Request) {
-    // Extraia o teacherId do usuário autenticado
     const user = req.user as { userId: string };
     return this.playlistService.create(createPlaylistDto, user.userId);
   }
@@ -25,9 +24,7 @@ export class PlaylistController {
   @Get()
   @ApiOperation({ summary: 'Lista todas as playlists' })
   async findAll(@Req() req: Request) {
-    // Se desejar, filtre as playlists pelo professor autenticado
     const user = req.user as { userId: string, role: string };
-    // Se o professor está autenticado, pode retornar somente suas playlists.
     return this.playlistService.findAll(user.userId);
   }
 

@@ -6,7 +6,7 @@ import { LoggingModule } from './logging/logging.module';
 import { GroupsModule } from './groups/groups.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ActivitiesModule } from './activities/activities.module';
-import { VideosModule } from './videos/videos.module';
+import { VideoModule } from './videos/video.module';
 import { PlaylistModule } from './playlists/playlist.module';
 import { ChatInsightsModule } from './chat-insights/chat-insights.module';
 import { AutomatedMessagesModule } from './automated-messages/automated-messages.module';
@@ -25,7 +25,8 @@ import { join } from 'path';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),  // Caminho para a pasta 'public'
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: "/uploads" 
     }),
     ConfigModule.forRoot({
       isGlobal: true,  // Faz as configurações estarem disponíveis globalmente
@@ -38,7 +39,7 @@ import { join } from 'path';
     GroupsModule,
     PaymentsModule,
     ActivitiesModule,
-    VideosModule,
+    VideoModule,
     PlaylistModule,
     ChatInsightsModule,
     AutomatedMessagesModule,
