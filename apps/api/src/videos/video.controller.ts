@@ -7,10 +7,11 @@ import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { VideoService } from './video.service';
 import { TeacherGuard } from 'src/teacher/guards/teacher.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt_auth.guard';
 
 @ApiTags('videos')
 @Controller('videos')
-@UseGuards(TeacherGuard)
+@UseGuards(TeacherGuard, JwtAuthGuard)
 export class VideoController {
   constructor(private readonly videoService: VideoService) {}
 

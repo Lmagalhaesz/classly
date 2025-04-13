@@ -1,9 +1,16 @@
 import { Module } from '@nestjs/common';
-import { PaymentsController } from './payments.controller';
-import { PaymentsService } from './payments.service';
+import { PaymentPlanController } from './payment-plan.controller';
+import { PaymentPlanService } from './payment-plan.service';
+import { PrismaModule } from '../prisma/prisma.module';
+import { StudentPaymentController } from './student-payment.controller';
+import { PaymentService } from './payment.service';
+import { TeacherModule } from 'src/teacher/teacher.module';
+import { TeacherPaymentController } from './teacher-payment.controller';
 
 @Module({
-  controllers: [PaymentsController],
-  providers: [PaymentsService]
+  imports: [PrismaModule, TeacherModule],
+  controllers: [PaymentPlanController, StudentPaymentController, TeacherPaymentController],
+  providers: [PaymentPlanService, PaymentService],
+  exports: [PaymentPlanService, PaymentService],
 })
 export class PaymentsModule {}

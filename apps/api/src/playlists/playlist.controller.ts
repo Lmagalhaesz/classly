@@ -6,10 +6,11 @@ import { CreatePlaylistDto } from './dtos/create-playlist.dto';
 import { UpdatePlaylistDto } from './dtos/update-playlist.dto';
 import { Request } from 'express';
 import { TeacherGuard } from 'src/teacher/guards/teacher.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt_auth.guard';
 
 @ApiTags('playlists')
 @Controller('playlists')
-@UseGuards(TeacherGuard)
+@UseGuards(TeacherGuard, JwtAuthGuard)
 export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) {}
 

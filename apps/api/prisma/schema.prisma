@@ -22,12 +22,6 @@ enum Level {
   ADVANCED
 }
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  OVERDUE
-}
-
 enum MessageType {
   CLASS_LINK
   PAYMENT_REMINDER
@@ -39,6 +33,21 @@ enum Sender {
   STUDENT
   AI
 }
+
+enum RecurrenceType {
+  MONTHLY
+  TRIMESTRAL
+  SEMESTRAL
+  ANNUAL
+  COMPLETE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
 
 // Modelos
 
@@ -53,7 +62,9 @@ model User {
   group    Group?  @relation(fields: [groupId], references: [id])
 
   groups         Group[]                  @relation("TeacherGroups")
-  payments       Payment[]
+  studentPayments      Payment[]      @relation("StudentPayments")
+  teacherPayments      Payment[]      @relation("TeacherPayments")
+  teacherPaymentPlans  PaymentPlan[]  @relation("TeacherPaymentPlans")
   taskAttempts   TaskAttempt[]
   chatInsights   ChatInsight[]
   conversations  Conversation[]
@@ -74,18 +85,37 @@ model Group {
   teacherId  String
   teacher    User       @relation("TeacherGroups", fields: [teacherId], references: [id])
   students   User[]
-  activities Activity[] // Adicionado para relação inversa com Activity
+  activities Activity[] 
 }
 
 model Payment {
-  id          String        @id @default(uuid())
-  studentId   String
-  student     User          @relation(fields: [studentId], references: [id])
-  dueDate     DateTime
-  amount      Float
-  status      PaymentStatus @default(PENDING)
-  paymentDate DateTime?
-  plan        String?
+  id          String         @id @default(uuid())
+  studentId   String         
+  teacherId   String         
+  planId      String?        
+  plan        PaymentPlan?   @relation(fields: [planId], references: [id])
+  amount      Float          
+  dueDate     DateTime       
+  paymentDate DateTime?      
+  status      PaymentStatus  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  student     User           @relation("StudentPayments", fields: [studentId], references: [id])
+  teacher     User           @relation("TeacherPayments", fields: [teacherId], references: [id])
+}
+
+model PaymentPlan {
+  id           String         @id @default(uuid())
+  teacherId    String
+  teacher      User           @relation("TeacherPaymentPlans", fields: [teacherId], references: [id])
+  recurrence   RecurrenceType 
+  amount       Float          
+  startDate    DateTime       
+  isActive     Boolean        @default(true) 
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  payments     Payment[]
 }
 
 model Activity {

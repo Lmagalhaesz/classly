@@ -64,8 +64,7 @@ export class ChatService {
         messages: [
           { role: 'system', content: 'Você é um assistente de apoio para ajudar alunos.' },
           ...messagesForAPI
-        ],
-        max_tokens: 150,
+        ]
       }, {
         headers: {
           'Content-Type': 'application/json',

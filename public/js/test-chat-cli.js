@@ -28,6 +28,6 @@ process.stdin.on("data", (data) => {
     socket.close();
     process.exit();
   } else {
-    socket.emit("chatMessage", { conversationId: "eb207520-dc7c-4ee3-8f98-583d7b827da0", message });
+    socket.emit("chatMessage", { conversationId: "ef244ce2-dbc8-4001-9978-735e929c2fe9", message });
   }
 });

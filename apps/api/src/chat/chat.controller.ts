@@ -4,10 +4,11 @@ import { ChatService } from './chat.service';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StudentGuard } from 'src/student/guards/student.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt_auth.guard';
 
 @ApiTags('chat')
 @Controller('chat')
-@UseGuards(StudentGuard)
+@UseGuards(JwtAuthGuard, StudentGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

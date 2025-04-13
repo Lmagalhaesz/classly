@@ -6,8 +6,6 @@ import { LoggingModule } from './logging/logging.module';
 import { GroupsModule } from './groups/groups.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ActivitiesModule } from './activities/activities.module';
-import { VideoModule } from './videos/video.module';
-import { PlaylistModule } from './playlists/playlist.module';
 import { ChatInsightsModule } from './chat-insights/chat-insights.module';
 import { AutomatedMessagesModule } from './automated-messages/automated-messages.module';
 import { ChatService } from './chat/chat.service';
@@ -21,6 +19,8 @@ import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { VideoModule } from './videos/video.module';
+import { PlaylistModule } from './playlists/playlist.module';
 
 @Module({
   imports: [
