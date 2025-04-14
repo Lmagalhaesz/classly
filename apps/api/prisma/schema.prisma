@@ -48,87 +48,95 @@ enum PaymentStatus {
   FAILED
 }
 
-
 // Modelos
 
 model User {
-  id       String  @id @default(uuid())
-  name     String
-  email    String  @unique
-  password String
-  role     Role
-  level    Level?
-  groupId  String?
-  group    Group?  @relation(fields: [groupId], references: [id])
-
-  groups         Group[]                  @relation("TeacherGroups")
-  studentPayments      Payment[]      @relation("StudentPayments")
-  teacherPayments      Payment[]      @relation("TeacherPayments")
-  teacherPaymentPlans  PaymentPlan[]  @relation("TeacherPaymentPlans")
-  taskAttempts   TaskAttempt[]
-  chatInsights   ChatInsight[]
-  conversations  Conversation[]
-  activities     Activity[]
-  videos         Video[]
-  messageConfigs AutomatedMessageConfig[]
-  playlists      Playlist[] // Adicionado para playlists dos professores
-
-  refreshTokens RefreshToken[] @relation("UserRefreshTokens")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String                   @id @default(uuid())
+  name                String
+  email               String                   @unique
+  password            String
+  role                Role
+  level               Level?
+  groupId             String?
+  teacherGroups       Group[]                  @relation("TeacherGroups")
+  studentGroups       Group[]                  @relation("StudentGroups")
+  studentPayments     Payment[]                @relation("StudentPayments")
+  teacherPayments     Payment[]                @relation("TeacherPayments")
+  teacherPaymentPlans PaymentPlan[]            @relation("TeacherPaymentPlans")
+  taskAttempts        TaskAttempt[]
+  chatInsights        ChatInsight[]
+  conversations       Conversation[]
+  activities          Activity[]
+  videos              Video[]
+  messageConfigs      AutomatedMessageConfig[]
+  playlists           Playlist[] // Adicionado para playlists dos professores
+  refreshTokens       RefreshToken[]           @relation("UserRefreshTokens")
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
 }
 
 model Group {
-  id         String     @id @default(uuid())
-  name       String
-  teacherId  String
-  teacher    User       @relation("TeacherGroups", fields: [teacherId], references: [id])
-  students   User[]
-  activities Activity[] 
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  teacherId   String
+  teacher     User              @relation("TeacherGroups", fields: [teacherId], references: [id])
+  invitations GroupInvitation[] @relation("GroupInvitations")
+  students    User[]            @relation("StudentGroups")
+  activities  Activity[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model GroupInvitation {
+  id         String    @id @default(uuid())
+  groupId    String
+  group      Group     @relation("GroupInvitations", fields: [groupId], references: [id])
+  inviteCode String    @unique
+  expiresAt  DateTime?
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Payment {
-  id          String         @id @default(uuid())
-  studentId   String         
-  teacherId   String         
-  planId      String?        
-  plan        PaymentPlan?   @relation(fields: [planId], references: [id])
-  amount      Float          
-  dueDate     DateTime       
-  paymentDate DateTime?      
-  status      PaymentStatus  
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  student     User           @relation("StudentPayments", fields: [studentId], references: [id])
-  teacher     User           @relation("TeacherPayments", fields: [teacherId], references: [id])
+  id          String        @id @default(uuid())
+  studentId   String
+  teacherId   String
+  planId      String?
+  plan        PaymentPlan?  @relation(fields: [planId], references: [id])
+  amount      Float
+  dueDate     DateTime
+  paymentDate DateTime?
+  status      PaymentStatus
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  student     User          @relation("StudentPayments", fields: [studentId], references: [id])
+  teacher     User          @relation("TeacherPayments", fields: [teacherId], references: [id])
 }
 
 model PaymentPlan {
-  id           String         @id @default(uuid())
-  teacherId    String
-  teacher      User           @relation("TeacherPaymentPlans", fields: [teacherId], references: [id])
-  recurrence   RecurrenceType 
-  amount       Float          
-  startDate    DateTime       
-  isActive     Boolean        @default(true) 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-
-  payments     Payment[]
+  id         String         @id @default(uuid())
+  teacherId  String
+  teacher    User           @relation("TeacherPaymentPlans", fields: [teacherId], references: [id])
+  recurrence RecurrenceType
+  amount     Float
+  startDate  DateTime
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  payments   Payment[]
 }
 
 model Activity {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  createdAt   DateTime @default(now())
-  teacherId   String
-  teacher     User     @relation(fields: [teacherId], references: [id])
-  level       Level
-  groupId     String?
-  group       Group?   @relation(fields: [groupId], references: [id])
-
+  id           String        @id @default(uuid())
+  title        String
+  description  String
+  createdAt    DateTime      @default(now())
+  teacherId    String
+  teacher      User          @relation(fields: [teacherId], references: [id])
+  level        Level
+  groupId      String?
+  group        Group?        @relation(fields: [groupId], references: [id])
   taskAttempts TaskAttempt[]
 }
 
@@ -160,7 +168,7 @@ model Video {
 
 model Playlist {
   id          String   @id @default(uuid())
-  title        String
+  title       String
   description String?
   teacherId   String
   teacher     User     @relation(fields: [teacherId], references: [id])
@@ -209,13 +217,11 @@ model ChatMessage {
 }
 
 model ChatInsight {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   studentId      String
   insight        String
-  createdAt      DateTime @default(now())
-
-  // Relações:
-  conversation Conversation @relation(fields: [conversationId], references: [id])
-  student      User         @relation(fields: [studentId], references: [id])
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  student        User         @relation(fields: [studentId], references: [id])
 }
