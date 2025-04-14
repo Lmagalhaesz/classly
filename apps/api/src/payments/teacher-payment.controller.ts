@@ -18,9 +18,6 @@ export class TeacherPaymentController {
   @ApiOperation({ summary: 'Cria um novo pagamento manualmente' })
   async create(@Body() createPaymentDto: CreatePaymentDto, @Req() req: Request) {
     const user = req.user as { userId: string; role: string };
-    if (user.role !== 'TEACHER' && user.role !== 'ADMIN') {
-      throw new BadRequestException('Acesso restrito a professores ou administradores.');
-    }
     return this.paymentService.create(createPaymentDto);
   }
 

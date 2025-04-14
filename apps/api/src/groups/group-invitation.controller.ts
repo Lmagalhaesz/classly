@@ -8,7 +8,7 @@ import { TeacherGuard } from 'src/teacher/guards/teacher.guard';
 
 @ApiTags('group-invitations')
 @Controller('groups')
-@UseGuards(JwtAuthGuard, TeacherGuard)
+@UseGuards(JwtAuthGuard)
 export class GroupInvitationController {
   constructor(private readonly invitationService: GroupInvitationService) {}
 
