@@ -5,8 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { LoggingModule } from './logging/logging.module';
 import { GroupsModule } from './groups/groups.module';
 import { PaymentsModule } from './payments/payments.module';
-import { ActivitiesModule } from './activities/activities.module';
-import { ChatInsightsModule } from './chat-insights/chat-insights.module';
+import { ActivityModule } from './activities/activities.module';
 import { AutomatedMessagesModule } from './automated-messages/automated-messages.module';
 import { ChatService } from './chat/chat.service';
 import { ChatController } from './chat/chat.controller';
@@ -21,6 +20,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { VideoModule } from './videos/video.module';
 import { PlaylistModule } from './playlists/playlist.module';
+import { TaskAttemptModule } from './task-attempts/task-attempt.module';
 
 @Module({
   imports: [
@@ -38,14 +38,14 @@ import { PlaylistModule } from './playlists/playlist.module';
     LoggingModule,
     GroupsModule,
     PaymentsModule,
-    ActivitiesModule,
+    ActivityModule,
     VideoModule,
     PlaylistModule,
-    ChatInsightsModule,
     AutomatedMessagesModule,
     ChatModule,
     TeacherModule,
     StudentModule,
+    TaskAttemptModule,
   ],
   controllers: [ChatController, StudentController],
   providers: [ChatService, StudentService],

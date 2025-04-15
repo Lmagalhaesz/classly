@@ -16,12 +16,17 @@ export class StudentController {
     private readonly groupInvitationService: GroupInvitationService,
     private readonly groupService: GroupService) {}
 
-  @Get('dashboard')
-  @ApiOperation({ summary: 'Retorna o dashboard do aluno' })
-  @ApiResponse({ status: 200, description: 'Dashboard retornado com sucesso.' })
-  getDashboard(@Req() req: Request) {
-    return this.studentService.getDashboard(req);
-  }
+    @Get('dashboard')
+    @ApiOperation({ summary: 'Retorna o dashboard do aluno, incluindo estatísticas de desempenho.' })
+    @ApiResponse({ status: 200, description: 'Dashboard retornado com sucesso.' })
+    async getDashboard(@Req() req: Request) {
+      const user = req.user as { userId: string };
+      const stats = await this.studentService.getPerformanceStats(user.userId);
+      return {
+        message: 'Dashboard do aluno',
+        performanceStats: stats,
+      };
+    }
 
   @Post('join')
   @ApiOperation({ summary: 'Aluno usa o código de convite para ingressar em uma turma' })

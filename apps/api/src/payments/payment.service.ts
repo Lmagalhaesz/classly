@@ -69,4 +69,30 @@ export class PaymentService {
       where: { id },
     });
   }
+
+  async purchasePlan(paymentPlanId: string, studentId: string) {
+    // Busque o plano de pagamento
+    const plan = await this.prisma.paymentPlan.findUnique({
+      where: { id: paymentPlanId },
+    });
+    if (!plan) {
+      throw new NotFoundException('Plano de pagamento não encontrado.');
+    }
+    
+    // Opcional: você pode calcular a data de vencimento com base na recorrência e na data de início
+    // Aqui usaremos a startDate como dueDate, mas essa lógica pode ser aprimorada.
+    const dueDate = plan.startDate;
+    
+    // Cria o registro de pagamento com status PENDING
+    return this.prisma.payment.create({
+      data: {
+        studentId,
+        teacherId: plan.teacherId,
+        planId: plan.id,
+        amount: plan.amount,
+        dueDate: new Date(dueDate),
+        status: 'PENDING',
+      },
+    });
+  }
 }

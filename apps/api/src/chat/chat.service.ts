@@ -1,5 +1,4 @@
-// src/chat/chat.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
 import { Sender } from '@prisma/client';
@@ -17,8 +16,8 @@ export class ChatService {
     return conversation; 
   }
 
-  async addStudentMessage(conversationId: string, message: string): Promise<void> {
-
+  // Agora recebendo userId como parâmetro para conectar ao registro de mensagem
+  async addStudentMessage(conversationId: string, message: string, userId: string): Promise<void> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
     });
@@ -28,10 +27,9 @@ export class ChatService {
     await this.prisma.chatMessage.create({
       data: {
         content: message,
-        sender: Sender.STUDENT,
-        conversation: {
-          connect: { id: conversationId },
-        },
+        sender: "STUDENT",  // ou Sender.STUDENT se estiver usando enum
+        conversation: { connect: { id: conversationId } },
+        user: { connect: { id: userId } }, // Agora o userId é passado corretamente
       },
     });
   }
@@ -59,28 +57,37 @@ export class ChatService {
     messagesForAPI.push({ role: "user", content: message });
     
     try {
-      const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: 'Você é um assistente de apoio para ajudar alunos.' },
-          ...messagesForAPI
-        ]
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`,
+      const response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: 'Você é um assistente de apoio para ajudar alunos.' },
+            ...messagesForAPI
+          ]
         },
-      });
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiApiKey}`,
+          },
+        }
+      );
       
       const aiMessage = response.data.choices[0].message.content;
       
+      // Defina um usuário de sistema para as mensagens da IA
+      const aiUserId = process.env.AI_USER_ID;
+      if (!aiUserId) {
+        throw new InternalServerErrorException("AI_USER_ID não configurado.");
+      }
+
       await this.prisma.chatMessage.create({
         data: {
           content: aiMessage,
-          sender: Sender.AI,
-          conversation: {
-            connect: { id: conversationId },
-          },
+          sender: "AI", // ou Sender.AI se estiver usando enum
+          conversation: { connect: { id: conversationId } },
+          user: { connect: { id: aiUserId } }, // Conecta um usuário "AI" pré-configurado
         },
       });
       
@@ -103,7 +110,4 @@ export class ChatService {
     });
     return messages;
   }
-  
 }
-
-
