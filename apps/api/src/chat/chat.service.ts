@@ -8,42 +8,67 @@ export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createConversation(userId: string): Promise<{ id: string }> {
-    const conversation = await this.prisma.conversation.create({
-      data: {
-        userId,
-      },
-    });
-    return conversation; 
+    console.log('Criando conversa para o usuário:', userId);
+    try {
+      const conversation = await this.prisma.conversation.create({
+        data: {
+          userId,
+        },
+      });
+      console.log('Conversa criada:', conversation);
+      return conversation;
+    } catch (error: any) {
+      console.error('Erro ao criar conversa:', error.message);
+      throw new InternalServerErrorException('Erro ao criar conversa.');
+    }
   }
 
-  // Agora recebendo userId como parâmetro para conectar ao registro de mensagem
   async addStudentMessage(conversationId: string, message: string, userId: string): Promise<void> {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-    });
-    if (!conversation) {
-      throw new Error(`Conversa com id ${conversationId} não encontrada.`);
+    console.log(`Adicionando mensagem do estudante para a conversa ${conversationId} (userId: ${userId}): "${message}"`);
+    try {
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+      });
+      if (!conversation) {
+        const errorMsg = `Conversa com id ${conversationId} não encontrada.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      const createdMessage = await this.prisma.chatMessage.create({
+        data: {
+          content: message,
+          sender: Sender.STUDENT,
+          conversation: { connect: { id: conversationId } },
+          user: { connect: { id: userId } },
+        },
+      });
+      console.log('Mensagem do estudante criada:', createdMessage);
+    } catch (error: any) {
+      console.error('Erro ao adicionar mensagem do estudante:', error.message);
+      throw new InternalServerErrorException('Erro ao adicionar mensagem do estudante.');
     }
-    await this.prisma.chatMessage.create({
-      data: {
-        content: message,
-        sender: "STUDENT",  // ou Sender.STUDENT se estiver usando enum
-        conversation: { connect: { id: conversationId } },
-        user: { connect: { id: userId } }, // Agora o userId é passado corretamente
-      },
-    });
   }
 
   async processMessageWithIA(conversationId: string, message: string): Promise<string> {
+    console.log(`Iniciando processamento com IA para a conversa ${conversationId}. Mensagem: "${message}"`);
+
     const openaiApiKey = process.env.OPENAI_API_KEY;
     if (!openaiApiKey) {
+      console.error('OPENAI_API_KEY não configurada.');
       return 'OpenAI API key não configurada.';
     }
     
-    const history = await this.getConversationHistory(conversationId);
+    let history;
+    try {
+      history = await this.getConversationHistory(conversationId);
+      console.log('Histórico da conversa recuperado:', history);
+    } catch (error: any) {
+      console.error('Erro ao recuperar histórico da conversa:', error.message);
+      return 'Erro ao recuperar histórico da conversa.';
+    }
     
     const messagesForAPI = history.map(msg => {
-      let role;
+      let role: string;
       if (msg.sender === Sender.STUDENT) {
         role = "user";
       } else if (msg.sender === Sender.AI) {
@@ -55,6 +80,7 @@ export class ChatService {
     });
     
     messagesForAPI.push({ role: "user", content: message });
+    console.log('Mensagens formatadas para envio à API do OpenAI:', messagesForAPI);
     
     try {
       const response = await axios.post(
@@ -74,40 +100,56 @@ export class ChatService {
         }
       );
       
+      console.log('Resposta da API do OpenAI:', response.data);
       const aiMessage = response.data.choices[0].message.content;
+      console.log('Mensagem da IA recebida:', aiMessage);
       
-      // Defina um usuário de sistema para as mensagens da IA
+      // Verifica a variável de ambiente para o usuário AI
       const aiUserId = process.env.AI_USER_ID;
       if (!aiUserId) {
+        console.error("AI_USER_ID não configurado.");
         throw new InternalServerErrorException("AI_USER_ID não configurado.");
       }
-
-      await this.prisma.chatMessage.create({
-        data: {
-          content: aiMessage,
-          sender: "AI", // ou Sender.AI se estiver usando enum
-          conversation: { connect: { id: conversationId } },
-          user: { connect: { id: aiUserId } }, // Conecta um usuário "AI" pré-configurado
-        },
-      });
+      
+      try {
+        const createdAiMessage = await this.prisma.chatMessage.create({
+          data: {
+            content: aiMessage,
+            sender: Sender.AI,
+            conversation: { connect: { id: conversationId } },
+            user: { connect: { id: aiUserId } },
+          },
+        });
+        console.log('Mensagem da IA registrada no banco:', createdAiMessage);
+      } catch (error: any) {
+        console.error('Erro ao criar a mensagem da IA no banco:', error.message);
+        throw new InternalServerErrorException('Erro ao salvar a mensagem da IA.');
+      }
       
       return aiMessage;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao chamar a API do OpenAI:', error.response?.data || error.message);
       return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
     }
   }
 
   async getConversationHistory(conversationId: string): Promise<any[]> {
-    const messages = await this.prisma.chatMessage.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-      select: { 
-        content: true, 
-        sender: true, 
-        createdAt: true 
-      },
-    });
-    return messages;
+    console.log(`Recuperando histórico de conversa para ${conversationId}...`);
+    try {
+      const messages = await this.prisma.chatMessage.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
+        select: { 
+          content: true, 
+          sender: true, 
+          createdAt: true 
+        },
+      });
+      console.log('Histórico de mensagens:', messages);
+      return messages;
+    } catch (error: any) {
+      console.error('Erro ao recuperar o histórico de mensagens:', error.message);
+      throw new InternalServerErrorException('Erro ao recuperar histórico de mensagens.');
+    }
   }
 }

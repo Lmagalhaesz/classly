@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import { WinstonModule } from 'nest-winston';
 import { loggerOptions } from './logging/logging.config';
 import { ConfigService } from '@nestjs/config';
+import { PrismaClient, Role } from '@prisma/client';
 
 dotenv.config();
 
