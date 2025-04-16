@@ -3,7 +3,7 @@ const io = require("socket.io-client");
 const socket = io("http://localhost:3000", {
   reconnection: true,
   auth: {
-    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNDBlNmQ1NS0yMDQwLTQwNzctOTI1Zi1hZWIxYjdlOTI2ZDUiLCJlbWFpbCI6Imxlb0BnbWFpbC5jb20iLCJyb2xlIjoiU1RVREVOVCIsImlhdCI6MTc0NDgzNTI2OCwiZXhwIjoxNzQ0ODM2MTY4LCJqdGkiOiI1NDM5NTIyYi1hOWE1LTRkOWMtYjkwYy1mOTg4Njg4M2VkZGYifQ.ASbI2pkyIzTuiX8JPF8C6nQvOK8abGqpv_ssAf5TSIo"
+    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNDBlNmQ1NS0yMDQwLTQwNzctOTI1Zi1hZWIxYjdlOTI2ZDUiLCJlbWFpbCI6Imxlb0BnbWFpbC5jb20iLCJyb2xlIjoiU1RVREVOVCIsImlhdCI6MTc0NDg0MTE3OSwiZXhwIjoxNzQ0ODQyMDc5LCJqdGkiOiJiNzYxM2NkZi1lOWYxLTQwMGItYTg1YS00ZTAzOGMzODAwZWQifQ.ExHdIHvJXjSBwxvOtyW0XnjKo3mWCq95vS5tuf8A4Co"
   }
 });
 
