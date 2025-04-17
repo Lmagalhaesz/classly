@@ -5,6 +5,7 @@ import AnimatedBackground from './animatedBackground';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import styles from './styles.module.css';
+import Header from '../header';
 
 export type RoleType = 'STUDENT' | 'TEACHER';
 
@@ -25,6 +26,7 @@ export default function RegisterWizard() {
   return (
     <>
       <AnimatedBackground />
+      <Header />
       <div>
         {step === 1 && <RoleStep onNext={setStep} onSelect={setSelectedRole} />}
         {step === 2 && selectedRole && (

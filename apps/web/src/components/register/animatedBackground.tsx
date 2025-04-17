@@ -25,6 +25,7 @@ export default function AnimatedBackground() {
       </div>
 
       <style jsx>{`
+
         .animated-bg {
           position: fixed;
           top: 0;
