@@ -1,5 +1,5 @@
 import React from 'react';
-import RegisterWizard from '../components/register/registerWizard';
+import RegisterWizard from '../../../../packages/ui/src/register/registerWizard';
 
 export default function RegisterPage() {
   return <RegisterWizard />;

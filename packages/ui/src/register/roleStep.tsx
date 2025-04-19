@@ -1,4 +1,4 @@
-import { RoleType } from "./registerWizard";
+import { RoleType } from "types/src/roles";
 
 interface Props {
   onNext: (step: 1 | 2) => void;
@@ -27,7 +27,7 @@ export default function RoleStep({ onNext, onSelect }: Props) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
 
         
 
@@ -48,13 +48,13 @@ export default function RoleStep({ onNext, onSelect }: Props) {
           align-items: center;
           justify-content: center;
           gap: 3rem;
-          margin-bottom: 70px;
+          margin-bottom: 120px;
         }
 
         .role-card {
-          width: 600px;
+          width: 750px;
           max-height: 100%;
-          height: 30%;
+          height: 500px;
           display: flex;
           flex-direction: column;
           background-color: white;
@@ -80,7 +80,7 @@ export default function RoleStep({ onNext, onSelect }: Props) {
         .role-card h2 {
           font-size: 2.5rem;
           margin-top: 10px;
-          color:rgb(255, 176, 4);
+          color:#ff6a00;
           margin-bottom: 2rem;
         }
         .role-card h2:hover{

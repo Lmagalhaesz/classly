@@ -1,8 +1,12 @@
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { RoleType } from './registerWizard';
+import { RoleType } from 'types/src/roles';
+import styles from './styles.module.css';
+import { LevelType } from 'types/src/levels';
+
 
 interface FormProps {
   role: RoleType;
+  level?: LevelType;
   onBack: () => void;
   onSubmit: (data: any) => void;
 }
@@ -26,7 +30,8 @@ export default function FormStep({ role, onBack, onSubmit }: FormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(handleForm)}>
+    <div className={styles.formCard}>
+        <form onSubmit={handleSubmit(handleForm)}>
       <h2>Registro de {role === 'STUDENT' ? 'Aluno' : 'Professor'}</h2>
       {/* Campos Nome, Email, Senha... */}
       {/* Campos de nível e grupoId se for STUDENT */}
@@ -35,5 +40,7 @@ export default function FormStep({ role, onBack, onSubmit }: FormProps) {
         <button type="submit" style={{ marginLeft: 16 }}>Registrar</button>
       </div>
     </form>
+    </div>
+    
   );
 }

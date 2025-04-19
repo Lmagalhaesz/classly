@@ -12,7 +12,7 @@ export default function Header() {
                 </div>
             </header>
 
-            <style jsx>{`
+            <style>{`
           .header {
             width: 100%;
             height: 80px;
@@ -52,7 +52,7 @@ export default function Header() {
             .button button{
                 height: 100%;
                 width: 110%;
-                background-color: rgb(255, 176, 4);
+                background-color: #ff6a00;
                 border-radius: 30px;
                 color: #ffff;
                 border: 0px;

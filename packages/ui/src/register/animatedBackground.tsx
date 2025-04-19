@@ -24,7 +24,7 @@ export default function AnimatedBackground() {
         <div ref={cursorRef} className="cursor-glow" />
       </div>
 
-      <style jsx>{`
+      <style>{`
 
         .animated-bg {
           position: fixed;
