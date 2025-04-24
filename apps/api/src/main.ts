@@ -1,18 +1,19 @@
 import { NestFactory } from '@nestjs/core';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
-import { WinstonModule } from 'nest-winston';
-import { loggerOptions } from './logging/logging.config';
+import { Logger } from 'nestjs-pino'; // Pino Logger
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient, Role } from '@prisma/client';
 
 dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: WinstonModule.createLogger(loggerOptions),
+    bufferLogs: true, // necessário para o logger capturar erros antes do boot completo
   });
+
+  app.useLogger(app.get(Logger)); // substitui logger global do Nest por Pino
+
   const configService = app.get(ConfigService);
 
   app.enableCors({
@@ -24,12 +25,12 @@ async function bootstrap() {
     .setDescription('The future of education systems.')
     .setVersion('1.0')
     .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  SwaggerModule.setup('api', app, SwaggerModule.createDocument(app, config));
 
   const port = configService.get<number>('port') || 3000;
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', true);
+
   await app.listen(port);
 }
 bootstrap();

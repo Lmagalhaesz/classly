@@ -1,18 +1,31 @@
+// Prisma Schema for the Linfox Education Platform
+// -----------------------------------------------
+// Este schema modela uma plataforma de gestão educacional
+// voltada para professores autônomos e pequenas escolas.
+
+
+// ------------------------
+// Datasource & Generator
+// ------------------------
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  connection_limit = 20
+  url      = env("DATABASE_URL")   
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// Enums
+
+
+// ------------------------
+// ENUMS
+// ------------------------
+
 enum Role {
-  STUDENT
-  TEACHER
-  ADMIN
+  STUDENT   // Usuário do tipo estudante
+  TEACHER   // Usuário do tipo professor
+  ADMIN     // Administrador da plataforma
 }
 
 enum Level {
@@ -24,10 +37,10 @@ enum Level {
 }
 
 enum MessageType {
-  CLASS_LINK
-  PAYMENT_REMINDER
-  BIRTHDAY_GREETING
-  ACTIVITY_FOLLOW_UP
+  CLASS_LINK          // Link para aula
+  PAYMENT_REMINDER    // Lembrete de pagamento
+  BIRTHDAY_GREETING   // Parabéns de aniversário
+  ACTIVITY_FOLLOW_UP  // Mensagem após atividade
 }
 
 enum Sender {
@@ -35,6 +48,7 @@ enum Sender {
   AI
 }
 
+/// Utilizado tanto para o plano do professor com nós quanto para os planos dos alunos com o professor
 enum RecurrenceType {
   MONTHLY
   TRIMESTRAL
@@ -56,10 +70,89 @@ enum ActivityType {
   PHOTO
 }
 
-// Modelos
+/// Faixas para análise comercial e realizar a venda
+enum StudentRange {
+  UP_TO_3
+  FROM_4_TO_10
+  FROM_11_TO_20
+  FROM_21_TO_50
+  FROM_51_TO_100
+  MORE_THAN_100
+}
 
+enum TeacherRange {
+  ONLY_ME
+  UP_TO_3
+  FROM_4_TO_5
+  FROM_6_TO_10
+  FROM_11_TO_20
+}
+
+
+
+// ------------------------
+// MODELS
+// ------------------------
+
+/// Representa os planos que há com faixas de preço personalizadas por quantidade de alunos/professores
+model CompanyPlanTier {
+  id            String        @id @default(uuid())
+  planId        String
+  plan          CompanyPlan   @relation(fields: [planId], references: [id])
+  minStudents   Int           // faixa mínima de alunos
+  maxStudents   Int           // faixa máxima de alunos
+  minTeachers   Int           // faixa mínima de professores
+  maxTeachers   Int           // faixa máxima de professores
+  price         Float         // valor cobrado mensal
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+/// Representa uma instituição de ensino ou empresa que centraliza professores e alunos.
+model Company {
+  id                  String         @id @default(uuid())
+  name                String
+  teachers            User[]         @relation("CompanyTeachers")
+  students            User[]         @relation("CompanyStudents")
+  planId              String?
+  plan                CompanyPlan?   @relation("CompanyToPlan", fields: [planId], references: [id])
+
+  // Informações para contato comercial
+  adminEmail          String?
+  adminPhone          String?
+
+  // Faixas para análise comercial
+  studentRange        StudentRange?
+  teacherRange        TeacherRange?
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  deletedAt           DateTime?
+}
+
+/// Plano de assinatura da empresa com funcionalidades e preços definidos.
+model CompanyPlan {
+  id        String                   @id @default(uuid())
+  name      String
+  price     Float
+  features  Json?
+  isActive  Boolean                  @default(true)
+  companies Company[]                @relation("CompanyToPlan")
+
+  // relação com faixas de preço
+  tiers     CompanyPlanTier[]  
+
+  deletedAt DateTime?
+}
+
+/// Representa um usuário do sistema, podendo ser estudante, professor ou administrador.
 model User {
   id                  String                   @id @default(uuid())
+  companyId           String?
+  company             Company?                 @relation("CompanyTeachers", fields: [companyId], references: [id]) // Para professores
+  companyAsStudentId  String?
+  companyAsStudent    Company?                 @relation("CompanyStudents", fields: [companyAsStudentId], references: [id]) // Para alunos  
+  isCompanyCreator    Boolean                  @default(false)
   name                String
   email               String                   @unique
   password            String
@@ -82,21 +175,30 @@ model User {
   refreshTokens       RefreshToken[]           @relation("UserRefreshTokens")
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+  deletedAt           DateTime?
+
+  @@index([companyId, role])
 }
 
+/// Representa uma turma, com um professor responsável e diversos alunos.
 model Group {
-  id          String            @id @default(uuid())
-  name        String
-  description String?
-  teacherId   String
-  teacher     User              @relation("TeacherGroups", fields: [teacherId], references: [id])
-  invitations GroupInvitation[] @relation("GroupInvitations")
-  students    User[]            @relation("StudentGroups")
-  activities  Activity[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id           String            @id @default(uuid())
+  name         String
+  description  String?
+  teacherId    String
+  teacher      User              @relation("TeacherGroups", fields: [teacherId], references: [id])
+  invitations  GroupInvitation[] @relation("GroupInvitations")
+  students     User[]            @relation("StudentGroups")
+  activities   Activity[]
+  lessonPlans  LessonPlan[]      // Planejamentos de aula gerados com base em mensagens
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+
+  @@index([teacherId])
 }
 
+/// Convite para entrada em uma turma, via link ou código gerado.
 model GroupInvitation {
   id         String    @id @default(uuid())
   groupId    String
@@ -105,24 +207,31 @@ model GroupInvitation {
   expiresAt  DateTime?
   acceptedAt DateTime?
   createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
 }
 
+/// Representa um pagamento feito de um aluno a um professor, com status e recorrência.
 model Payment {
-  id          String        @id @default(uuid())
+  id          String       @id @default(uuid())
   studentId   String
   teacherId   String
   planId      String?
-  plan        PaymentPlan?  @relation(fields: [planId], references: [id])
+  plan        PaymentPlan? @relation(fields: [planId], references: [id])
   amount      Float
   dueDate     DateTime
   paymentDate DateTime?
   status      PaymentStatus
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  student     User          @relation("StudentPayments", fields: [studentId], references: [id])
-  teacher     User          @relation("TeacherPayments", fields: [teacherId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  student     User         @relation("StudentPayments", fields: [studentId], references: [id])
+  teacher     User         @relation("TeacherPayments", fields: [teacherId], references: [id])
+
+  @@index([studentId])
+  @@index([teacherId])
 }
 
+/// Define planos de pagamento para os professores que recebem mensalidade.
 model PaymentPlan {
   id         String         @id @default(uuid())
   teacherId  String
@@ -133,9 +242,21 @@ model PaymentPlan {
   isActive   Boolean        @default(true)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+  deletedAt  DateTime?
   payments   Payment[]
 }
 
+/// Planejamento de aula gerado automaticamente para uma turma específica.
+model LessonPlan {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+}
+
+/// Atividades que alunos devem realizar (exercícios).
 model Activity {
   userId        String?
   user          User?         @relation(fields: [userId], references: [id])
@@ -144,18 +265,20 @@ model Activity {
   id            String        @id @default(uuid())
   title         String
   level         Level
-  description   String? // Descrição ou instrução da atividade
-  type          ActivityType // Tipo da atividade
-  options       Json? // Ex: [{"option": "am", "isCorrect": true}, {"option": "are", "isCorrect": false}]
+  description   String?
+  type          ActivityType
+  options       Json?
   correctAnswer String?
   mediaUrl      String?
   createdBy     String
   autoGenerated Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
   taskAttempts  TaskAttempt[]
 }
 
+/// Registro das tentativas dos alunos nas atividades.
 model TaskAttempt {
   id               String   @id @default(uuid())
   activityId       String
@@ -167,8 +290,10 @@ model TaskAttempt {
   score            Float?
   startedAt        DateTime @default(now())
   finishedAt       DateTime
+  deletedAt        DateTime?
 }
 
+/// Vídeo enviado por professores, categorizado por nível.
 model Video {
   id          String    @id @default(uuid())
   title       String
@@ -180,8 +305,10 @@ model Video {
   teacherId   String
   teacher     User      @relation(fields: [teacherId], references: [id])
   level       Level
+  deletedAt   DateTime?
 }
 
+/// Playlist de vídeos organizados por nível.
 model Playlist {
   id          String   @id @default(uuid())
   title       String
@@ -191,8 +318,10 @@ model Playlist {
   videos      Video[]
   level       Level
   createdAt   DateTime @default(now())
+  deletedAt   DateTime?
 }
 
+/// Configuração de mensagens automáticas por parte do professor.
 model AutomatedMessageConfig {
   id          String      @id @default(uuid())
   teacherId   String
@@ -201,8 +330,10 @@ model AutomatedMessageConfig {
   template    String
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
+  deletedAt   DateTime?
 }
 
+/// Token de sessão para manter o login do usuário.
 model RefreshToken {
   id        String   @id @default(uuid())
   token     String   @unique
@@ -211,8 +342,10 @@ model RefreshToken {
   expiresAt DateTime
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
+  deletedAt DateTime?
 }
 
+/// Conversas de IA com o aluno para geração de insights e planejamentos.
 model Conversation {
   id          String        @id @default(uuid())
   userId      String
@@ -221,8 +354,10 @@ model Conversation {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   ChatInsight ChatInsight[]
+  deletedAt   DateTime?
 }
 
+/// Mensagens trocadas entre aluno e IA (usadas para gerar planos).
 model ChatMessage {
   id             String       @id @default(uuid())
   conversationId String
@@ -232,8 +367,13 @@ model ChatMessage {
   content        String
   sender         Sender
   createdAt      DateTime     @default(now())
+  usedInPlanning Boolean      @default(false)
+  deletedAt      DateTime?
+
+  @@index([userId])
 }
 
+/// Insights gerados com base nas conversas com IA.
 model ChatInsight {
   id             String       @id @default(uuid())
   conversationId String
@@ -242,4 +382,5 @@ model ChatInsight {
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   student        User         @relation(fields: [studentId], references: [id])
+  deletedAt      DateTime?
 }
