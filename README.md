@@ -30,7 +30,6 @@ generator client {
 
 ## 🎯 ENUMS
 
-Enum	        Descrição
 Role	        Define o tipo de usuário: estudante, professor ou admin
 Level	        Níveis de fluência do aluno (Basic, Intermediate, etc.)
 MessageType	    Tipos de mensagens automáticas
@@ -82,38 +81,40 @@ Representa os planejamentos de aula gerados (por IA ou manualmente) com base nos
 
 - A API vai armazenar o histórico de conversas dos alunos no chatbot, e com isso criará planejamentos e insights para aperfeiçoar e transformar as aulas mais produtivas.
 
-#### 📝 Activity
-Atividades educacionais criadas para alunos realizarem.
+### 📝 Activity
+Representa atividades educacionais criadas para alunos realizarem.
 
 ### 🧠 TaskAttempt
-Tentativas de alunos nas atividades.
+Representa tentativas de alunos nas atividades.
 
 ### 🎬 Video
-Vídeos educacionais enviados pelos professores.
+Representa vídeos educacionais enviados pelos professores.
 
 ### 📺 Playlist
-Playlists de vídeos, organizadas por nível de dificuldade.
+Representa playlists de vídeos, organizadas por nível de dificuldade.
 
 ### 💬 Conversation
-Conversa entre aluno e IA para análise e sugestão de conteúdos/planejamento de aulas.
+Representa conversa entre aluno e IA para análise e sugestão de conteúdos/planejamento de aulas.
 
 ### 💭 ChatMessage
-Mensagens trocadas em conversas de IA.
+Representa mensagens trocadas em conversas de IA.
 
 ### 🔎 ChatInsight
-Insights gerados com base nas conversas com a IA.
+Representa insights gerados com base nas conversas com a IA.
+
+- Com base no histórico de conversas, a plataforma oferece sugestões e insights sobre cada um dos alunos individualmente, porporcionando um controle e acompanhamento muito mais aprofundado de seus alunos.
 
 ### 🧠 AutomatedMessageConfig
-Configurações de mensagens automáticas de lembretes, felicitações, follow-ups de atividades, etc.
+Representa as configurações de mensagens automáticas de lembretes, felicitações, follow-ups de atividades, etc.
 
 ### 🔐 RefreshToken
-Tokens de sessão para autenticação segura com JWT.
+Representa tokens de sessão para autenticação segura com JWT.
 
 ### 🧾 Payment
-Controle de pagamentos de alunos para professores.
+Representa controle de pagamentos de alunos para professores.
 
 ### 📅 PaymentPlan
-Planos de cobrança recorrente configurados pelos professores.
+Representa planos de cobrança recorrente configurados pelos professores.
 
 ## 🔥 Boas Práticas Aplicadas
 

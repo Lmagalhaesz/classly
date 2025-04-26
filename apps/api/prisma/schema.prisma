@@ -185,6 +185,7 @@ model Group {
   id           String            @id @default(uuid())
   name         String
   description  String?
+  level        Level
   teacherId    String
   teacher      User              @relation("TeacherGroups", fields: [teacherId], references: [id])
   invitations  GroupInvitation[] @relation("GroupInvitations")
