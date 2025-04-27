@@ -127,7 +127,7 @@ export class GroupInvitationController {
       const invitation = await this.invitationService.useInvitation(inviteCode);
 
       // Adiciona o aluno ao grupo
-      await this.groupService.addStudent(invitation.group.id, user.userId);
+      await this.groupService.addStudent(invitation.groupId, user.userId);
 
       // Marca o convite como aceito
       await this.invitationService.acceptInvitation(inviteCode);

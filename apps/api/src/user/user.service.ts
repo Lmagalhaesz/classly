@@ -6,98 +6,122 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dtos/create-user.dto';
-import { UpdateUserDto } from './dtos/update-user.dto';
-import { Role, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { Role, User } from '@prisma/client';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+/**
+ * Service responsável pelas operações relacionadas ao modelo de usuário.
+ * Implementa criação, listagem, busca, atualização e exclusão de usuários,
+ * além de autenticação baseada em email.
+ */
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+
+    /**
+     * Logger estruturado baseado no Pino, para rastreabilidade e métricas.
+     */
+    @InjectPinoLogger(UserService.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   /**
-   * Cria um novo usuário com as validações apropriadas
-   * - Garante que o email seja único
-   * - Hash da senha
-   * - Permite definir nível e grupo apenas para STUDENT
+   * Cria um novo usuário no sistema após verificar se o email já está em uso.
+   * @param createUserDto Dados para criação de usuário.
+   * @returns Usuário criado.
    */
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
-    const { email, password, role, level, groupId } = createUserDto;
+  async createUser(createUserDto: CreateUserDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: createUserDto.email },
+    });
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
+      this.logger.warn({ email: createUserDto.email }, 'Email já cadastrado');
       throw new ConflictException('Email já utilizado por outro usuário.');
     }
 
-    // Criptografa a senha
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    // Cria o usuário com base no DTO
     const user = await this.prisma.user.create({
       data: {
         name: createUserDto.name,
-        email,
+        email: createUserDto.email,
         password: hashedPassword,
-        role,
-        level: role === Role.STUDENT ? level : undefined,
-        groupId: role === Role.STUDENT ? groupId : undefined,
-        isCompanyCreator: false, // padrão inicial (pode ser alterado via painel)
+        role: createUserDto.role,
+        level: createUserDto.level,
+        groupId: createUserDto.groupId,
+        isCompanyCreator: false,
       },
     });
 
+    this.logger.info({ userId: user.id }, 'Usuário criado com sucesso');
     return user;
   }
 
   /**
-   * Retorna todos os usuários cadastrados
-   * (futuramente pode ser adaptado para paginação ou filtros)
+   * Lista todos os usuários cadastrados.
+   * @returns Array de usuários.
    */
   async getAllUsers(): Promise<User[]> {
-    return this.prisma.user.findMany();
+    const users = await this.prisma.user.findMany();
+    this.logger.info({ count: users.length }, 'Listagem de usuários');
+    return users;
   }
 
   /**
-   * Busca um único usuário pelo ID
-   * Lança erro caso não encontrado
+   * Busca um usuário específico por ID.
+   * @param id ID do usuário.
+   * @returns Usuário encontrado.
    */
-  async getUserById(id: string): Promise<User> {
+  async getUserById(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
 
     if (!user) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
+      this.logger.warn({ userId: id }, 'Usuário não encontrado');
+      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
     }
 
+    this.logger.info({ userId: id }, 'Usuário encontrado');
     return user;
   }
 
   /**
-   * Atualiza os dados de um usuário com validações específicas:
-   * - Email não pode estar em uso por outro usuário
-   * - Somente alunos podem alterar nível e grupo
-   * - Senha é rehashada se for atualizada
+   * Atualiza os dados de um usuário existente, realizando validações de email e tipo de role.
+   * @param id ID do usuário a ser atualizado.
+   * @param updateData Campos atualizáveis.
+   * @returns Usuário atualizado.
    */
   async updateUser(id: string, updateData: UpdateUserDto): Promise<User> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const existingUser = await this.prisma.user.findUnique({ where: { id } });
 
-    if (!user) {
-      throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
+    if (!existingUser) {
+      this.logger.warn({ userId: id }, 'Usuário para atualização não encontrado');
+      throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
     }
 
-    // Validação de e-mail único
-    if (updateData.email && updateData.email !== user.email) {
-      const emailTaken = await this.prisma.user.findUnique({ where: { email: updateData.email } });
-      if (emailTaken) {
+    if (updateData.email && updateData.email !== existingUser.email) {
+      const emailUser = await this.prisma.user.findUnique({
+        where: { email: updateData.email },
+      });
+
+      if (emailUser) {
+        this.logger.warn({ email: updateData.email }, 'Email em uso por outro usuário');
         throw new ConflictException('O email informado já está sendo utilizado por outro usuário.');
       }
     }
 
-    // Hash da nova senha (se for atualizada)
     if (updateData.password) {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
 
-    // Apenas alunos podem atualizar `level` e `groupId`
-    if (user.role !== Role.STUDENT && (updateData.level !== undefined || updateData.groupId !== undefined)) {
-      throw new BadRequestException('Somente usuários do tipo STUDENT podem alterar level ou groupId.');
+    if (existingUser.role !== Role.STUDENT) {
+      if (updateData.level !== undefined || updateData.groupId !== undefined) {
+        this.logger.warn({ userId: id }, 'Tentativa de alterar atributos exclusivos de STUDENT');
+        throw new BadRequestException('Somente usuários do tipo STUDENT podem atualizar level ou groupId.');
+      }
     }
 
     const updatedUser = await this.prisma.user.update({
@@ -105,21 +129,28 @@ export class UserService {
       data: updateData,
     });
 
+    this.logger.info({ userId: id }, 'Usuário atualizado com sucesso');
     return updatedUser;
   }
 
   /**
-   * Exclui um usuário permanentemente do banco
-   * (pode ser ajustado futuramente para soft delete via deletedAt)
+   * Remove um usuário do sistema com base no ID.
+   * @param id ID do usuário a ser excluído.
    */
-  async deleteUser(id: string): Promise<User> {
-    return this.prisma.user.delete({ where: { id } });
+  async deleteUser(id: string) {
+    const deletedUser = await this.prisma.user.delete({ where: { id } });
+    this.logger.info({ userId: id }, 'Usuário excluído com sucesso');
+    return deletedUser;
   }
 
   /**
-   * Busca usuário pelo email (comum para login)
+   * Busca um usuário pelo email (útil para autenticação).
+   * @param email Email do usuário.
+   * @returns Usuário encontrado ou null.
    */
-  async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email } });
+  async findByEmail(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    this.logger.debug({ email }, 'Busca de usuário por email');
+    return user;
   }
 }
