@@ -36,7 +36,11 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Autentica o usuário e retorna tokens JWT' })
-  @ApiResponse({ status: 200, description: 'Login bem-sucedido. Retorna access token no body e refresh token no cookie.' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Login bem-sucedido. Retorna access token no body e refresh token no cookie.',
+  })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
   async login(
     @Body() loginDto: LoginDto,
@@ -61,14 +65,20 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @ApiOperation({ summary: 'Gera um novo par de tokens baseado no refresh token' })
+  @ApiOperation({
+    summary: 'Gera um novo par de tokens baseado no refresh token',
+  })
   @ApiResponse({ status: 200, description: 'Tokens renovados com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Token inválido, expirado ou utilizado em dispositivo não autorizado.' })
+  @ApiResponse({
+    status: 401,
+    description:
+      'Token inválido, expirado ou utilizado em dispositivo não autorizado.',
+  })
   async refresh(@Req() req: ExpressRequest) {
     const refreshToken = req.cookies?.refresh_token;
-    const userAgent = req.headers['user-agent'] || 'Unknown Browser';
+    const userAgent = req.headers?.['user-agent'] || 'Unknown Browser';
     const ipAddress =
-      (req.headers['x-forwarded-for'] as string) || req.ip || 'Unknown IP';
+      (req.headers?.['x-forwarded-for'] as string) || req.ip || 'Unknown IP';
     return this.authService.refreshToken(refreshToken, userAgent, ipAddress);
   }
 
@@ -81,9 +91,15 @@ export class AuthController {
   }
 
   @Post('logout')
-  @ApiOperation({ summary: 'Realiza logout e invalida o refresh token da sessão atual' })
+  @ApiOperation({
+    summary: 'Realiza logout e invalida o refresh token da sessão atual',
+  })
   @ApiResponse({ status: 200, description: 'Logout bem-sucedido.' })
-  @ApiResponse({ status: 401, description: 'Refresh token inválido, expirado ou em uso fora do dispositivo/IP original.' })
+  @ApiResponse({
+    status: 401,
+    description:
+      'Refresh token inválido, expirado ou em uso fora do dispositivo/IP original.',
+  })
   async logout(@Req() req: ExpressRequest) {
     const refreshToken = req.cookies?.refresh_token;
     const userAgent = req.headers['user-agent'] || 'Unknown Browser';
@@ -97,8 +113,13 @@ export class AuthController {
   @Roles('ADMIN')
   @Post('revoke-all')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Revoga todos os access tokens do usuário, forçando novo login' })
-  @ApiResponse({ status: 200, description: 'Todos os tokens foram revogados com sucesso.' })
+  @ApiOperation({
+    summary: 'Revoga todos os access tokens do usuário, forçando novo login',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Todos os tokens foram revogados com sucesso.',
+  })
   async revokeAllTokens(@Req() req) {
     const userId = req.user.userId;
     await this.authService.revokeAllTokens(userId);
