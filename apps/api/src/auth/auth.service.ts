@@ -12,7 +12,12 @@ import { LoginDto } from './dtos/login.dto';
 import { RegisterUserDto } from './dtos/register-user.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { randomUUID } from 'crypto';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
+/**
+ * Service responsável por autenticação, emissão de tokens e controle de sessões.
+ * Integra autenticação JWT, Redis para refresh tokens e segurança baseada em IP/User-Agent.
+ */
 @Injectable()
 export class AuthService {
   constructor(
@@ -21,52 +26,59 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
+    @InjectPinoLogger(AuthService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
+  /**
+   * Registra novo usuário no sistema, validando duplicidade de email.
+   */
   async registerUser(registerDto: RegisterUserDto) {
     const existingUser = await this.userService.findByEmail(registerDto.email);
     if (existingUser) {
+      this.logger.warn({ email: registerDto.email }, 'Tentativa de registro com email duplicado');
       throw new ConflictException('Já existe um usuário com este email.');
     }
-    return this.userService.createUser(registerDto);
+    const user = await this.userService.createUser(registerDto);
+    this.logger.info({ userId: user.id }, 'Usuário registrado com sucesso');
+    return user;
   }
 
-  async login(
-    loginDto: LoginDto,
-  ): Promise<{ access_token: string; refresh_token: string }> {
+  /**
+   * Autentica usuário e gera tokens JWT de acesso e refresh.
+   */
+  async login(loginDto: LoginDto): Promise<{ access_token: string; refresh_token: string }> {
     const user = await this.userService.findByEmail(loginDto.email);
     if (!user) {
+      this.logger.warn({ email: loginDto.email }, 'Email não encontrado no login');
       throw new UnauthorizedException('Credenciais inválidas.');
     }
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
     if (!isPasswordValid) {
+      this.logger.warn({ email: loginDto.email }, 'Senha incorreta no login');
       throw new UnauthorizedException('Credenciais inválidas.');
     }
     const jti = randomUUID();
-    const payload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion};
+    const payload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion };
+
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
       secret: this.configService.get<string>('JWT_SECRET'),
       jwtid: jti,
     });
-    // Passa os metadados extraídos no controller para criar o refresh token
+
     const refreshToken = await this.createRefreshToken(
       user.id,
       loginDto.userAgent || 'Unknown Browser',
       loginDto.ipAddress || 'Unknown IP',
     );
+
+    this.logger.info({ userId: user.id }, 'Login bem-sucedido, tokens emitidos');
     return { access_token: accessToken, refresh_token: refreshToken };
   }
 
   /**
-  @param userId - ID do usuário
-  @param jti - O identificador único do access token (para ligar a sessão)
-  @param userAgent - Informação do navegador
-  @param ipAddress - Endereço IP da requisição
-  @returns O refresh token gerado (string)
+   * Cria e armazena refresh token no Redis com informações de sessão.
    */
   async createRefreshToken(
     userId: string,
@@ -74,107 +86,89 @@ export class AuthService {
     ipAddress: string,
   ): Promise<string> {
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
-    if (!refreshSecret) {
-      throw new Error('JWT_REFRESH_SECRET não configurado.');
-    }
-  
-    // Gera um identificador único da sessão (JWT ID)
+    if (!refreshSecret) throw new Error('JWT_REFRESH_SECRET não configurado.');
+
     const jti = randomUUID();
-  
-    // Cria o token com o jti incluído
-    const refreshToken = this.jwtService.sign(
-      { sub: userId, jti },
-      { expiresIn: '7d', secret: refreshSecret },
-    );
-  
+    const refreshToken = this.jwtService.sign({ sub: userId, jti }, {
+      expiresIn: '7d',
+      secret: refreshSecret,
+    });
+
     const ttl = 7 * 24 * 60 * 60;
     const sessionKey = `session:${jti}`;
-  
+
     await this.redisService.client.hmset(sessionKey, {
       userId,
       userAgent,
       ipAddress,
       createdAt: new Date().toISOString(),
-      refreshToken, // Opcional: pode guardar o token em si para auditoria
+      refreshToken,
     });
-  
     await this.redisService.client.expire(sessionKey, ttl);
-  
-    console.log(`Sessão armazenada no Redis: ${sessionKey}`);
+
+    this.logger.debug({ userId, sessionKey }, 'Sessão criada no Redis');
     return refreshToken;
-  }  
+  }
 
-
+  /**
+   * Renova o access token usando refresh token válido com verificação de dispositivo/IP.
+   */
   async refreshToken(
     oldToken: string,
     userAgent: string,
     ipAddress: string,
   ): Promise<{ access_token: string; refresh_token: string }> {
-    // Verifica se o token é válido
-    if (!oldToken) {
-      throw new UnauthorizedException('Refresh token não foi fornecido.');
-    }
-  
-    // Verifica se o token é válido
+    if (!oldToken) throw new UnauthorizedException('Refresh token não foi fornecido.');
+
     const refreshPayload = this.jwtService.verify(oldToken, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
     });
     const jti = refreshPayload.jti;
-  
     const sessionKey = `session:${jti}`;
     const session = await this.redisService.client.hgetall(sessionKey);
-  
-    // Verifica se a sessão existe
+
     if (!session || Object.keys(session).length === 0) {
+      this.logger.warn({ jti }, 'Refresh token não encontrado ou expirado');
       throw new UnauthorizedException('Refresh token inválido ou expirado.');
     }
 
-  // Verifica se o token foi revogado
     if (session.userAgent !== userAgent || session.ipAddress !== ipAddress) {
-      throw new UnauthorizedException(
-        'Token usado em dispositivo ou IP diferente.',
-      );
+      this.logger.warn({ jti, session }, 'Tentativa de refresh de outro dispositivo/IP');
+      throw new UnauthorizedException('Token usado em dispositivo ou IP diferente.');
     }
-  
-    // Revoga o token
+
     await this.redisService.client.del(sessionKey);
-  
-    // Cria um novo token de acesso e refresh token
+
     const user = await this.userService.getUserById(session.userId);
-    if (!user) {
-      throw new UnauthorizedException('Usuário não encontrado.');
-    }
-  
-    // Cria o novo token de acesso
-    const accessPayload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion};
+    if (!user) throw new UnauthorizedException('Usuário não encontrado.');
+
+    const accessPayload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion };
     const newAccessToken = this.jwtService.sign(accessPayload, {
       expiresIn: '15m',
       secret: this.configService.get<string>('JWT_SECRET'),
       jwtid: randomUUID(),
     });
-  
-    // Cria o novo refresh token
+
     const newRefreshToken = await this.createRefreshToken(
       user.id,
       session.userAgent,
       session.ipAddress,
     );
-  
-    // Retorna os novos tokens
+
+    this.logger.info({ userId: user.id }, 'Tokens renovados com sucesso');
     return { access_token: newAccessToken, refresh_token: newRefreshToken };
   }
-    
 
+  /**
+   * Invalida uma sessão específica baseada no refresh token fornecido.
+   */
   async logout(
     refreshToken: string,
     userAgent: string,
     ipAddress: string,
   ): Promise<{ message: string }> {
+    if (!refreshToken) throw new UnauthorizedException('Refresh token não fornecido.');
 
-    // Verifica se o token é válido
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token não fornecido.');
-    }
     let jti: string;
     try {
       const payload = this.jwtService.verify(refreshToken, {
@@ -184,34 +178,32 @@ export class AuthService {
     } catch (e) {
       throw new UnauthorizedException('Refresh token inválido.');
     }
-  
-    // Verifica se a sessão existe
+
     const sessionKey = `session:${jti}`;
     const session = await this.redisService.client.hgetall(sessionKey);
+
     if (!session || Object.keys(session).length === 0) {
+      this.logger.warn({ jti }, 'Tentativa de logout com sessão inexistente');
       throw new UnauthorizedException('Refresh token inválido ou já expirado.');
     }
-  
-    // Verifica se o token foi revogado
+
     if (session.userAgent !== userAgent || session.ipAddress !== ipAddress) {
-      throw new UnauthorizedException(
-        'Logout negado: token não pertence a este dispositivo.',
-      );
+      this.logger.warn({ sessionKey }, 'Dispositivo/IP não compatível no logout');
+      throw new UnauthorizedException('Logout negado: token não pertence a este dispositivo.');
     }
-  
-    // Revoga o token
+
     await this.redisService.client.del(sessionKey);
+    this.logger.info({ userId: session.userId }, 'Logout realizado com sucesso');
     return { message: 'Logout realizado com sucesso.' };
   }
-    
-  
 
+  /**
+   * Lista todas as sessões ativas do usuário logado.
+   */
   async getUserSessions(userId: string): Promise<any[]> {
-    // Obtenha todas as chaves de sessão
     const keys = await this.redisService.client.keys('session:*');
     const sessions: any[] = [];
     for (const key of keys) {
-      // Recupere os dados da sessão a partir da chave
       const session = await this.redisService.client.hgetall(key);
       if (session.userId === userId) {
         sessions.push({
@@ -222,54 +214,53 @@ export class AuthService {
         });
       }
     }
+    this.logger.debug({ userId, count: sessions.length }, 'Sessões ativas recuperadas');
     return sessions;
   }
 
-  async revokeSession(
-    userId: string,
-    sessionKey: string,
-  ): Promise<{ message: string }> {
+  /**
+   * Revoga uma sessão específica pertencente ao usuário logado.
+   */
+  async revokeSession(userId: string, sessionKey: string): Promise<{ message: string }> {
     const session = await this.redisService.client.hgetall(sessionKey);
 
-    if (
-      !session ||
-      Object.keys(session).length === 0 ||
-      session.userId !== userId
-    ) {
-      throw new UnauthorizedException(
-        'Sessão não encontrada ou não autorizada.',
-      );
+    if (!session || Object.keys(session).length === 0 || session.userId !== userId) {
+      this.logger.warn({ sessionKey }, 'Sessão não encontrada ou não pertence ao usuário');
+      throw new UnauthorizedException('Sessão não encontrada ou não autorizada.');
     }
 
     await this.redisService.client.del(sessionKey);
+    this.logger.info({ sessionKey }, 'Sessão revogada com sucesso');
     return { message: 'Sessão revogada com sucesso.' };
   }
 
+  /**
+   * Revoga todas as sessões do usuário removendo todos os refresh tokens ativos no Redis.
+   */
   async revokeAllSessions(userId: string): Promise<{ message: string }> {
-    // Busca todas as chaves de sessão que seguem o padrão "session:*"
     const keys = await this.redisService.client.keys('session:*');
-
     let revokedCount = 0;
-    // Para cada chave, verifica se o refresh token pertence ao usuário
     for (const key of keys) {
       const session = await this.redisService.client.hgetall(key);
-      // Verifica se o campo "userId" da sessão corresponde ao usuário fornecido
       if (session.userId === userId) {
-        // Revoga a sessão removendo a chave do Redis
         await this.redisService.client.del(key);
         revokedCount++;
       }
     }
-
+    this.logger.info({ userId, revokedCount }, 'Todas as sessões revogadas');
     return {
       message: `${revokedCount} sessões revogadas para o usuário ${userId}.`,
     };
   }
 
+  /**
+   * Revoga todos os access tokens via incremento do tokenVersion no banco.
+   */
   async revokeAllTokens(userId: string): Promise<void> {
     await this.prisma.user.update({
       where: { id: userId },
       data: { tokenVersion: { increment: 1 } },
     });
+    this.logger.info({ userId }, 'Todos os access tokens foram revogados via tokenVersion');
   }
 }

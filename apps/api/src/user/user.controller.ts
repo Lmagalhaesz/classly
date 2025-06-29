@@ -12,7 +12,7 @@ import {
   import { CreateUserDto } from './dtos/create-user.dto';
   import { UpdateUserDto } from './dtos/update-user.dto';
 import { Role } from '@prisma/client';
-import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
   
   @ApiTags('users')
   @Controller('users')

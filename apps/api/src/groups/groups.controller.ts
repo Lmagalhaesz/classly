@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt_auth.guard';
 import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiConflictResponse, ApiInternalServerErrorResponse, ApiNotFoundResponse } from '@nestjs/swagger';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 
 @ApiTags('groups')
