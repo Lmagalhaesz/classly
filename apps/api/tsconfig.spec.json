@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "baseUrl": ".",
+      "paths": {
+        "src/*": ["./src/*"]
+      },
+      "types": ["jest", "node"],
+      "esModuleInterop": true,
+      "module": "CommonJS"
+    },
+    "include": ["src/**/*.ts", "src/**/*.spec.ts"],
+    "exclude": ["node_modules"]
+  }
+  
