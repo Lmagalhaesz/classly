@@ -168,9 +168,10 @@ model User {
   chatInsights        ChatInsight[]
   conversations       Conversation[]
   chatMessages        ChatMessage[]            @relation("UserChatMessages")
+  messageConfigs      AutomatedMessageConfig[]
   activities          Activity[]
   videos              Video[]
-  messageConfigs      AutomatedMessageConfig[]
+  pdfMaterials        PdfMaterial[]
   playlists           Playlist[]
   refreshTokens       RefreshToken[]           @relation("UserRefreshTokens")
   tokenVersion        Int    @default(0)
@@ -307,6 +308,22 @@ model Video {
   teacherId   String
   teacher     User      @relation(fields: [teacherId], references: [id])
   level       Level
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+}
+
+/// PDF enviado por professores, categoriado por nível.
+model PdfMaterial {
+  id          String    @id @default(uuid())
+  title       String
+  url         String
+  description String?
+  playlistId  String?
+  playlist    Playlist? @relation(fields: [playlistId], references: [id])
+  uploadedAt  DateTime  @default(now())
+  teacherId   String
+  teacher     User      @relation(fields: [teacherId], references: [id])
+  level       Level
   deletedAt   DateTime?
 }
 
@@ -318,6 +335,7 @@ model Playlist {
   teacherId   String
   teacher     User     @relation(fields: [teacherId], references: [id])
   videos      Video[]
+  pdfs        PdfMaterial[]
   level       Level
   createdAt   DateTime @default(now())
   deletedAt   DateTime?

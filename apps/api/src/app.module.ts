@@ -17,8 +17,7 @@ import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { VideoModule } from './videos/video.module';
-import { PlaylistModule } from './playlists/playlist.module';
+import { MaterialsModule } from './materials/materials.module';
 import { TaskAttemptModule } from './task-attempts/task-attempt.module';
 import { LoggerModule } from 'nestjs-pino';
 
@@ -51,8 +50,7 @@ import { LoggerModule } from 'nestjs-pino';
     GroupsModule,
     PaymentsModule,
     ActivityModule,
-    VideoModule,
-    PlaylistModule,
+    MaterialsModule,
     AutomatedMessagesModule,
     ChatModule,
     TeacherModule,

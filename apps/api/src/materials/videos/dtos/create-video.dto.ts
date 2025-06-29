@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsEnum, IsUrl } from 'class-validator';
 import { Level } from '@prisma/client';
 
 export class CreateVideoDto {
@@ -8,6 +8,7 @@ export class CreateVideoDto {
 
   @IsNotEmpty({ message: 'A URL do vídeo é obrigatória.' })
   @IsString()
+  @IsUrl({}, { message: 'A URL deve ser válida.' })
   url: string;
 
   @IsOptional()
