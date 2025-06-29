@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
 import { Logger } from 'nestjs-pino'; // Pino Logger
 import { ConfigService } from '@nestjs/config';
+import * as cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -30,6 +31,8 @@ async function bootstrap() {
   const port = configService.get<number>('port') || 3000;
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', true);
+
+  app.use(cookieParser());
 
   await app.listen(port);
 }

@@ -1,5 +1,3 @@
-// src/auth/auth.service.ts
-
 import {
   Injectable,
   ConflictException,
@@ -79,90 +77,134 @@ export class AuthService {
     if (!refreshSecret) {
       throw new Error('JWT_REFRESH_SECRET não configurado.');
     }
-    // Gerar o refresh token (você pode incluir mais informações no payload se desejar)
+  
+    // Gera um identificador único da sessão (JWT ID)
+    const jti = randomUUID();
+  
+    // Cria o token com o jti incluído
     const refreshToken = this.jwtService.sign(
-      { sub: userId },
+      { sub: userId, jti },
       { expiresIn: '7d', secret: refreshSecret },
     );
-    // TTL em segundos para 7 dias
+  
     const ttl = 7 * 24 * 60 * 60;
-    // Crie uma chave exclusiva para a sessão; aqui usamos o refreshToken diretamente na chave
-    const sessionKey = `session:${refreshToken}`;
-    // Armazene os metadados no Redis (usando hmset, que define múltiplos campos)
+    const sessionKey = `session:${jti}`;
+  
     await this.redisService.client.hmset(sessionKey, {
       userId,
       userAgent,
       ipAddress,
       createdAt: new Date().toISOString(),
+      refreshToken, // Opcional: pode guardar o token em si para auditoria
     });
-    // Defina o tempo de expiração da chave conforme o TTL
+  
     await this.redisService.client.expire(sessionKey, ttl);
-    await this.redisService.client.hmset(sessionKey, {
-      userId,
-      userAgent,
-      ipAddress,
-      createdAt: new Date().toISOString(),
-    });
-    await this.redisService.client.expire(sessionKey, ttl);
+  
     console.log(`Sessão armazenada no Redis: ${sessionKey}`);
-    // Opcional: faça um log dos dados armazenados:
-    const storedData = await this.redisService.client.hgetall(sessionKey);
-    console.log('Dados da sessão:', storedData);
     return refreshToken;
-  }
+  }  
+
 
   async refreshToken(
     oldToken: string,
+    userAgent: string,
+    ipAddress: string,
   ): Promise<{ access_token: string; refresh_token: string }> {
+    // Verifica se o token é válido
     if (!oldToken) {
       throw new UnauthorizedException('Refresh token não foi fornecido.');
     }
-
-    const sessionKey = `session:${oldToken}`;
+  
+    // Verifica se o token é válido
+    const refreshPayload = this.jwtService.verify(oldToken, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    });
+    const jti = refreshPayload.jti;
+  
+    const sessionKey = `session:${jti}`;
     const session = await this.redisService.client.hgetall(sessionKey);
+  
+    // Verifica se a sessão existe
     if (!session || Object.keys(session).length === 0) {
       throw new UnauthorizedException('Refresh token inválido ou expirado.');
     }
 
+  // Verifica se o token foi revogado
+    if (session.userAgent !== userAgent || session.ipAddress !== ipAddress) {
+      throw new UnauthorizedException(
+        'Token usado em dispositivo ou IP diferente.',
+      );
+    }
+  
+    // Revoga o token
     await this.redisService.client.del(sessionKey);
-
+  
+    // Cria um novo token de acesso e refresh token
     const user = await this.userService.getUserById(session.userId);
-
     if (!user) {
       throw new UnauthorizedException('Usuário não encontrado.');
     }
-
-    const newJti = randomUUID();
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload, {
+  
+    // Cria o novo token de acesso
+    const accessPayload = { sub: user.id, email: user.email, role: user.role };
+    const newAccessToken = this.jwtService.sign(accessPayload, {
       expiresIn: '15m',
       secret: this.configService.get<string>('JWT_SECRET'),
-      jwtid: newJti,
+      jwtid: randomUUID(),
     });
-
+  
+    // Cria o novo refresh token
     const newRefreshToken = await this.createRefreshToken(
       user.id,
       session.userAgent,
       session.ipAddress,
     );
-    return { access_token: accessToken, refresh_token: newRefreshToken };
+  
+    // Retorna os novos tokens
+    return { access_token: newAccessToken, refresh_token: newRefreshToken };
   }
+    
 
-  async logout(refreshToken: string): Promise<{ message: string }> {
+  async logout(
+    refreshToken: string,
+    userAgent: string,
+    ipAddress: string,
+  ): Promise<{ message: string }> {
+    
+    // Verifica se o token é válido
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token não fornecido.');
     }
-
-    const sessionKey = `session:${refreshToken}`;
+    let jti: string;
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+      jti = payload.jti;
+    } catch (e) {
+      throw new UnauthorizedException('Refresh token inválido.');
+    }
+  
+    // Verifica se a sessão existe
+    const sessionKey = `session:${jti}`;
     const session = await this.redisService.client.hgetall(sessionKey);
-
     if (!session || Object.keys(session).length === 0) {
       throw new UnauthorizedException('Refresh token inválido ou já expirado.');
     }
-
+  
+    // Verifica se o token foi revogado
+    if (session.userAgent !== userAgent || session.ipAddress !== ipAddress) {
+      throw new UnauthorizedException(
+        'Logout negado: token não pertence a este dispositivo.',
+      );
+    }
+  
+    // Revoga o token
     await this.redisService.client.del(sessionKey);
     return { message: 'Logout realizado com sucesso.' };
   }
+    
+  
 
   async getUserSessions(userId: string): Promise<any[]> {
     // Obtenha todas as chaves de sessão
