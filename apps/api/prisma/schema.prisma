@@ -173,6 +173,7 @@ model User {
   messageConfigs      AutomatedMessageConfig[]
   playlists           Playlist[]
   refreshTokens       RefreshToken[]           @relation("UserRefreshTokens")
+  tokenVersion        Int    @default(0)
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   deletedAt           DateTime?

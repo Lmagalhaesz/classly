@@ -46,7 +46,7 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
     const jti = randomUUID();
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion};
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -146,7 +146,7 @@ export class AuthService {
     }
   
     // Cria o novo token de acesso
-    const accessPayload = { sub: user.id, email: user.email, role: user.role };
+    const accessPayload = { sub: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion};
     const newAccessToken = this.jwtService.sign(accessPayload, {
       expiresIn: '15m',
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -170,7 +170,7 @@ export class AuthService {
     userAgent: string,
     ipAddress: string,
   ): Promise<{ message: string }> {
-    
+
     // Verifica se o token é válido
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token não fornecido.');
@@ -264,5 +264,12 @@ export class AuthService {
     return {
       message: `${revokedCount} sessões revogadas para o usuário ${userId}.`,
     };
+  }
+
+  async revokeAllTokens(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+    });
   }
 }

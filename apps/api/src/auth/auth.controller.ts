@@ -7,6 +7,8 @@ import {
   Req,
   Res,
   Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -78,5 +80,14 @@ export class AuthController {
       (req.headers['x-forwarded-for'] as string) || req.ip || 'Unknown IP';
 
     return this.authService.logout(refreshToken, userAgent, ipAddress);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('revoke-all')
+  @HttpCode(HttpStatus.OK)
+  async revokeAllTokens(@Req() req) {
+    const userId = req.user.userId;
+    await this.authService.revokeAllTokens(userId);
+    return { message: 'Todos os tokens foram revogados com sucesso.' };
   }
 }
