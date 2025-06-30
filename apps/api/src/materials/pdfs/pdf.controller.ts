@@ -11,7 +11,12 @@ import {
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/guards/jwt_auth.guard';
 import { TeacherGuard } from 'src/teacher/guards/teacher.guard';
@@ -48,7 +53,12 @@ export class PdfController {
     @Query('limit') limit = 10,
   ) {
     const teacherId = (req.user as any).userId;
-    return this.pdfService.findAll(teacherId, search, Number(page), Number(limit));
+    return this.pdfService.findAll(
+      teacherId,
+      search,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get(':id')
@@ -71,7 +81,7 @@ export class PdfController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Mover PDF para lixeira (soft delete)' })
-  async remove(@Param('id') id: string, @Req() req: Request) {
+  async remove(@Param('id') id: string, @Req() req: Request): Promise<void> {
     const teacherId = (req.user as any).userId;
     await this.pdfService.softDelete(id, teacherId);
   }
@@ -88,6 +98,6 @@ export class PdfController {
   @ApiOperation({ summary: 'Excluir permanentemente o PDF' })
   async hardDelete(@Param('id') id: string, @Req() req: Request) {
     const teacherId = (req.user as any).userId;
-    await this.pdfService.hardDelete(id, teacherId);
+    return this.pdfService.hardDelete(id, teacherId);
   }
 }

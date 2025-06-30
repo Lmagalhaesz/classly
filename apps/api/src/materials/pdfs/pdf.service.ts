@@ -17,13 +17,17 @@ export class PdfMaterialService {
     private readonly logger: PinoLogger,
   ) {}
 
-  private async checkOwnership(id: string, teacherId: string) {
-    const material = await this.prisma.pdfMaterial.findUnique({ where: { id } });
+   async checkOwnership(id: string, teacherId: string) {
+    const material = await this.prisma.pdfMaterial.findUnique({
+      where: { id },
+    });
     if (!material || material.deletedAt) {
       throw new NotFoundException('PDF não encontrado.');
     }
     if (material.teacherId !== teacherId) {
-      throw new ForbiddenException('Você não tem permissão para acessar este PDF.');
+      throw new ForbiddenException(
+        'Você não tem permissão para acessar este PDF.',
+      );
     }
     return material;
   }
@@ -35,11 +39,15 @@ export class PdfMaterialService {
       });
 
       if (!playlist || playlist.teacherId !== teacherId) {
-        throw new BadRequestException('Playlist inválida ou não pertence a você.');
+        throw new BadRequestException(
+          'Playlist inválida ou não pertence a você.',
+        );
       }
 
       if (playlist.level !== dto.level) {
-        throw new BadRequestException('O nível do PDF deve corresponder ao nível da playlist.');
+        throw new BadRequestException(
+          'O nível do PDF deve corresponder ao nível da playlist.',
+        );
       }
     }
 
@@ -106,11 +114,15 @@ export class PdfMaterialService {
       });
 
       if (!playlist || playlist.teacherId !== teacherId) {
-        throw new BadRequestException('Playlist inválida ou não pertence a você.');
+        throw new BadRequestException(
+          'Playlist inválida ou não pertence a você.',
+        );
       }
 
       if (playlist.level !== dto.level) {
-        throw new BadRequestException('O nível do PDF deve corresponder ao nível da playlist.');
+        throw new BadRequestException(
+          'O nível do PDF deve corresponder ao nível da playlist.',
+        );
       }
     }
 
@@ -123,20 +135,19 @@ export class PdfMaterialService {
     return updated;
   }
 
-  async softDelete(id: string, teacherId: string) {
+  async softDelete(id: string, teacherId: string): Promise<void> {
     await this.checkOwnership(id, teacherId);
-
-    const deleted = await this.prisma.pdfMaterial.update({
+    await this.prisma.pdfMaterial.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
-
     this.logger.warn({ pdfId: id }, 'PDF movido para lixeira');
-    return deleted;
   }
 
   async restore(id: string, teacherId: string) {
-    const material = await this.prisma.pdfMaterial.findUnique({ where: { id } });
+    const material = await this.prisma.pdfMaterial.findUnique({
+      where: { id },
+    });
 
     if (!material || material.teacherId !== teacherId) {
       throw new NotFoundException('PDF não encontrado ou acesso negado.');
@@ -155,11 +166,12 @@ export class PdfMaterialService {
     return restored;
   }
 
-  async hardDelete(id: string, teacherId: string) {
+  async hardDelete(
+    id: string,
+    teacherId: string,
+  ): Promise<{ message: string }> {
     await this.checkOwnership(id, teacherId);
-
     await this.prisma.pdfMaterial.delete({ where: { id } });
-
     this.logger.warn({ pdfId: id }, 'PDF deletado permanentemente');
     return { message: 'PDF deletado permanentemente.' };
   }

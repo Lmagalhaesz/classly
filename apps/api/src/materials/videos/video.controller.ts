@@ -11,6 +11,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Patch,
 } from '@nestjs/common';
 import { VideoService } from './video.service';
 import { CreateVideoDto } from './dtos/create-video.dto';
@@ -85,13 +86,13 @@ export class VideoController {
     await this.videoService.remove(id);
   }
 
-  @Put(':id/restore')
+  @Patch(':id/restore')
   @ApiOperation({ summary: 'Restaurar vídeo da lixeira' })
   async restore(@Param('id') id: string) {
     return this.videoService.restore(id);
   }
 
-  @Delete(':id/permanent')
+  @Delete(':id/hard')
   @ApiOperation({ summary: 'Excluir vídeo permanentemente (hard delete)' })
   async hardDelete(@Param('id') id: string) {
     return this.videoService.hardDelete(id);
