@@ -133,11 +133,13 @@ describe('PdfController', () => {
 
   describe('remove (softDelete)', () => {
     it('deve chamar softDelete', async () => {
-      jest.spyOn(service, 'softDelete').mockResolvedValue(undefined);
+      const deletedPdf = { ...pdfMock, deletedAt: new Date() };
+      jest.spyOn(service, 'softDelete').mockResolvedValue(deletedPdf);
 
-      await controller.remove('1', req);
+      const result = await controller.remove('1', req);
 
       expect(service.softDelete).toHaveBeenCalledWith('1', req.user.userId);
+      expect(result).toEqual(deletedPdf);
     });
   });
 

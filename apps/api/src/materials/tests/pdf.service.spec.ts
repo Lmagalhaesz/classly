@@ -208,22 +208,38 @@ describe('PdfMaterialService', () => {
   });
 
   describe('softDelete', () => {
-    it('soft delete PDF', async () => {
-      jest.spyOn(service, 'softDelete').mockResolvedValue(undefined);
-      const result = await service.softDelete('id', 'teacherId');
-      expect(result).toBeUndefined();
+    it('deve lançar NotFoundException se PDF não existir', async () => {
+      jest
+        .spyOn(service as any, 'checkOwnership')
+        .mockRejectedValue(new NotFoundException());
+      await expect(service.softDelete('pdfid', 'teacherid')).rejects.toThrow(
+        NotFoundException,
+      );
     });
-    it('deve lançar NotFoundException se PDF não existir no softDelete', async () => {
-    jest.spyOn(service, 'checkOwnership').mockRejectedValue(new NotFoundException());
 
-    await expect(service.softDelete('pdfid', 'teacherid')).rejects.toThrow(NotFoundException);
-  });
+    it('deve lançar ForbiddenException se não for owner', async () => {
+      jest
+        .spyOn(service as any, 'checkOwnership')
+        .mockRejectedValue(new ForbiddenException());
+      await expect(service.softDelete('pdfid', 'teacherid')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
 
-  it('deve lançar ForbiddenException se não for owner no softDelete', async () => {
-    jest.spyOn(service, 'checkOwnership').mockRejectedValue(new ForbiddenException());
+    it('deve mover o PDF para lixeira e retornar objeto', async () => {
+      const deletedAtDate = new Date();
+      const mockPdf = { ...pdfStub, deletedAt: deletedAtDate };
+      jest.spyOn(service as any, 'checkOwnership').mockResolvedValue(pdfStub);
+      prisma.pdfMaterial.update.mockResolvedValue(mockPdf);
 
-    await expect(service.softDelete('pdfid', 'teacherid')).rejects.toThrow(ForbiddenException);
-  });
+      const result = await service.softDelete('pdfid', 'teacherid');
+
+      expect(result).toEqual(mockPdf);
+      expect(prisma.pdfMaterial.update).toHaveBeenCalledWith({
+        where: { id: 'pdfid' },
+        data: { deletedAt: expect.any(Date) },
+      });
+    });
   });
 
   describe('restore', () => {

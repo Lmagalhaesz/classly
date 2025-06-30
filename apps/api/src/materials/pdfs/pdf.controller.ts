@@ -81,9 +81,9 @@ export class PdfController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Mover PDF para lixeira (soft delete)' })
-  async remove(@Param('id') id: string, @Req() req: Request): Promise<void> {
+  async remove(@Param('id') id: string, @Req() req: Request) {
     const teacherId = (req.user as any).userId;
-    await this.pdfService.softDelete(id, teacherId);
+    return await this.pdfService.softDelete(id, teacherId);
   }
 
   @Put(':id/restore')

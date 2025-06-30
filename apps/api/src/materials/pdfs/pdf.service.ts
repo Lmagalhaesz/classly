@@ -135,14 +135,17 @@ export class PdfMaterialService {
     return updated;
   }
 
-  async softDelete(id: string, teacherId: string): Promise<void> {
-    await this.checkOwnership(id, teacherId);
-    await this.prisma.pdfMaterial.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-    this.logger.warn({ pdfId: id }, 'PDF movido para lixeira');
-  }
+  async softDelete(id: string, teacherId: string) {
+  await this.checkOwnership(id, teacherId);
+
+  const deleted = await this.prisma.pdfMaterial.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  this.logger.warn({ pdfId: id }, 'PDF movido para lixeira');
+  return deleted;
+}
 
   async restore(id: string, teacherId: string) {
     const material = await this.prisma.pdfMaterial.findUnique({
